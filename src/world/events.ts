@@ -37,6 +37,7 @@ export interface GameEvents {
   'loan.missedPayment': { loanId: string; borrowerId: EntityId; amount: Money };
   'loan.defaulted': { loanId: string; borrowerId: EntityId; exposure: Money; loss: Money };
   'loan.matured': { loanId: string };
+  'loan.workedOut': { loanId: string; borrowerId: EntityId; recovered: Money };
 
   'deposit.opened': { depositId: string; bankId: EntityId; customerId: EntityId; amount: Money };
   'deposit.placed': { depositId: string; amount: Money };

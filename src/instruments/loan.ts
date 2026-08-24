@@ -5,7 +5,7 @@ import { AC, depositCode } from '../ledger/accounts.js';
 import { credit, debit, post, type LedgerState } from '../ledger/ledger.js';
 import { addInstrument, touch, type WorldState } from '../world/state.js';
 import { paymentPostings, spendable } from '../world/transfer.js';
-import { activeLoansOf, isStillActive, liquidateAssets } from '../agents/insolvency.js';
+import { activeLoansOf, isInsolvent, isStillActive, liquidateAssets, raiseCash } from '../agents/insolvency.js';
 import type { CreditGrade, EntityId } from '../world/types.js';
 import { instrumentTypes } from './registry.js';
 import type { Instrument, InstrumentContext, InstrumentType } from './types.js';
@@ -191,13 +191,18 @@ function scheduledPayment(inst: Instrument): Money {
  */
 export function defaultLoan(ctx: InstrumentContext, inst: Instrument): void {
   const { ledger, world, tick } = ctx;
-
-  // Sell what the borrower has before deciding what is lost. A firm that has
-  // stopped paying is finished, so this is a wind-up, not a workout.
   const obligor = world.entities[inst.obligorId];
-  if (obligor?.kind === 'company' && obligor.status !== 'defaulted') {
-    liquidateAssets(world, ledger, tick, inst.obligorId);
-  }
+  const trading = obligor?.kind === 'company' && obligor.status !== 'defaulted' ? obligor : undefined;
+
+  // Missing payments is not the same as being finished. A firm whose assets
+  // still cover its debts is illiquid, not insolvent: it is made to sell
+  // enough to clear the facility and carries on trading. Treating the two as
+  // one thing is why a missed interest payment on a small third-party loan
+  // used to take down every other lender with it.
+  if (trading && !isInsolvent(ledger, trading.id) && workOut(ctx, inst)) return;
+
+  // From here it is a wind-up: sell everything and write off what will not sell.
+  if (trading) liquidateAssets(world, ledger, tick, trading.id);
 
   const exposure = add(inst.outstanding, inst.accrued);
   const recoverable = scale(exposure, 1 - world.config.lossGivenDefault);
@@ -236,16 +241,64 @@ export function defaultLoan(ctx: InstrumentContext, inst: Instrument): void {
   inst.status = 'defaulted';
   ctx.emit('loan.defaulted', { loanId: inst.id, borrowerId: inst.obligorId, exposure, loss });
 
-  // A borrower that has defaulted on one lender has defaulted on all of them.
-  if (obligor?.kind === 'company' && obligor.status !== 'defaulted') {
-    obligor.status = 'defaulted';
-    obligor.employees = 0;
-    for (const loanId of activeLoansOf(world, obligor.id)) {
+  // An insolvent borrower has defaulted on all of its lenders, not just this one.
+  if (trading && trading.status !== 'defaulted') {
+    trading.status = 'defaulted';
+    trading.employees = 0;
+    for (const loanId of activeLoansOf(world, trading.id)) {
       if (loanId === inst.id || !isStillActive(world, loanId)) continue;
       defaultLoan(ctx, world.instruments[loanId]!);
     }
-    ctx.emit('company.failed', { companyId: obligor.id, sector: obligor.sector });
+    ctx.emit('company.failed', { companyId: trading.id, sector: trading.sector });
   }
+}
+
+/**
+ * A solvent borrower that has run out of cash sells assets until it can clear
+ * the facility outright. The lender is repaid in full and the loan closes
+ * early; the firm keeps trading on a smaller balance sheet.
+ *
+ * Returns false if it could not raise enough, in which case it really is a
+ * wind-up after all.
+ */
+function workOut(ctx: InstrumentContext, inst: Instrument): boolean {
+  const { ledger, world, tick } = ctx;
+  const owed = add(inst.outstanding, inst.accrued);
+  const shortfall = sub(owed, availableFunds(world, ledger, inst.obligorId));
+  if (shortfall > 0) raiseCash(world, ledger, tick, inst.obligorId, shortfall);
+  if (availableFunds(world, ledger, inst.obligorId) < owed) return false;
+
+  post(ledger, {
+    tick,
+    kind: 'loan.workout',
+    description: `Forced repayment of ${inst.id}`,
+    refs: { loanId: inst.id },
+    postings: [
+      ...paymentPostings(world, {
+        amount: inst.accrued,
+        fromId: inst.obligorId,
+        fromContra: AC.INTEREST_PAYABLE,
+        toId: inst.holderId,
+        toContra: AC.INTEREST_RECEIVABLE,
+      }),
+      ...paymentPostings(world, {
+        amount: inst.outstanding,
+        fromId: inst.obligorId,
+        fromContra: AC.BORROWINGS,
+        toId: inst.holderId,
+        toContra: AC.LOANS,
+      }),
+    ],
+  });
+
+  const borrower = world.entities[inst.obligorId];
+  if (borrower?.kind === 'company') borrower.status = 'distressed';
+  inst.outstanding = ZERO;
+  inst.accrued = ZERO;
+  inst.data.arrears = 0;
+  inst.status = 'closed';
+  ctx.emit('loan.workedOut', { loanId: inst.id, borrowerId: inst.obligorId, recovered: owed });
+  return true;
 }
 
 /** Basel-ish standardised weights, deliberately simple and easy to replace. */
