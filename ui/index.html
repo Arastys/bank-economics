@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='14' font-size='14'%3E%F0%9F%8F%A6%3C/text%3E%3C/svg%3E" />
+<title>Sterling &amp; Vale — Bank Economics</title>
+<style>
+  :root {
+    --bg: #10141c; --panel: #171d28; --panel-2: #1e2635; --line: #2a3547;
+    --ink: #e6edf6; --dim: #8d9bb0; --accent: #5aa9ff; --good: #3ecf8e;
+    --warn: #f2b544; --bad: #ff6b6b; --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .num { font-variant-numeric: tabular-nums; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  header {
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+    padding: 14px 20px; background: var(--panel); border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 10;
+  }
+  header h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: .2px; }
+  header .date { color: var(--dim); font-size: 13px; }
+  .speeds { display: flex; gap: 6px; margin-left: auto; }
+  button {
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 7px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); }
+  button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #0b1017; font-weight: 600; }
+  button.ghost { background: transparent; }
+  button.approve { border-color: #2c6b4f; color: var(--good); }
+  button.decline { border-color: #6b2c2c; color: var(--bad); }
+  main { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 14px; padding: 16px 20px 40px; align-items: start; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  section > h2 {
+    margin: 0; padding: 11px 14px; font-size: 12px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .08em; color: var(--dim);
+    border-bottom: 1px solid var(--line); background: var(--panel-2);
+  }
+  section > .body { padding: 12px 14px; }
+  .wide { grid-column: 1 / -1; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .tile { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .tile .k { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
+  .tile .v { font-size: 19px; margin-top: 3px; font-weight: 600; }
+  .tile .v.good { color: var(--good); } .tile .v.warn { color: var(--warn); } .tile .v.bad { color: var(--bad); }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  th { color: var(--dim); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+  td.r, th.r { text-align: right; }
+  tr:last-child td { border-bottom: none; }
+  tfoot td { font-weight: 650; border-top: 1px solid var(--line); border-bottom: none; }
+  .feed { max-height: 300px; overflow-y: auto; }
+  .feed div { padding: 3px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; color: var(--dim); }
+  .feed div:last-child { border-bottom: none; }
+  .feed .critical { color: var(--bad); } .feed .warning { color: var(--warn); } .feed .info { color: var(--ink); }
+  .control { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; margin-bottom: 10px; }
+  .control label { font-size: 12.5px; color: var(--dim); }
+  .control output { font-size: 13px; }
+  input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+  select { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; font: inherit; font-size: 13px; }
+  .row { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .empty { color: var(--dim); font-size: 13px; padding: 6px 0; }
+  .chart { display: block; width: 100%; height: 46px; }
+  .chartRow { margin-bottom: 12px; }
+  .chartRow .lbl { display: flex; justify-content: space-between; font-size: 12px; color: var(--dim); margin-bottom: 2px; }
+  .pill { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--dim); }
+</style>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module" src="../dist/ui/main.js"></script>
+</body>
+</html>

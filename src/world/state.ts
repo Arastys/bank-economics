@@ -1,0 +1,295 @@
+import type { IdCounters } from '../core/ids.js';
+import type { Money } from '../core/money.js';
+import type { Day } from '../core/time.js';
+import type { LedgerState } from '../ledger/ledger.js';
+import type { Instrument } from '../instruments/types.js';
+import type {
+  Cohort,
+  Company,
+  CreditGrade,
+  Entity,
+  EntityId,
+  Household,
+  Region,
+  Sector,
+} from './types.js';
+
+/** Tunables. Everything a designer might want to rebalance lives here. */
+export interface SimConfig {
+  /** Days a credit application stays on the desk before it lapses. */
+  applicationValidityDays: number;
+  /** Ticks a resolved entity must be idle before it can fold back into a cohort. */
+  demotionIdleDays: number;
+  /** Hard ceiling on resolved entities, to bound per-tick cost. */
+  maxResolvedEntities: number;
+  /** Loss given default, as a share of exposure. */
+  lossGivenDefault: number;
+  /** Central bank reaction function. */
+  taylorInflationWeight: number;
+  taylorOutputWeight: number;
+  neutralRealRate: number;
+  /** How fast prices respond to excess demand. */
+  priceAdjustment: number;
+  /** How fast firms adjust headcount. */
+  hiringAdjustment: number;
+  /** Corporation tax rate applied at year end. */
+  corporationTaxRate: number;
+  /** Regulatory minimums, reported but not yet enforced. */
+  minimumCapitalRatio: number;
+  minimumLiquidityRatio: number;
+  /** FSCS protection limit per depositor per bank. */
+  depositProtectionLimit: Money;
+}
+
+export interface MarketState {
+  /** Overnight rate at which banks lend to each other. Tracks Bank Rate closely. */
+  interbankRate: number;
+  /** Zero-coupon yields by tenor in years. */
+  yieldCurve: Record<number, number>;
+  /** Credit spread over the risk-free curve, by grade. */
+  creditSpreads: Record<CreditGrade, number>;
+  /** Clean price per £1 nominal, by bond id. */
+  bondPrices: Record<string, number>;
+}
+
+export interface EconomyState {
+  /** Average price of a unit of output, in pence. The index the CPI is built from. */
+  priceIndex: number;
+  /** Year-on-year CPI inflation. */
+  inflationAnnual: number;
+  /** Output relative to potential, as a share. Positive is a boom. */
+  outputGap: number;
+  unemployment: number;
+  /** Units of goods produced on the last tick. */
+  outputUnits: number;
+  demandUnits: number;
+  /** Slow-moving estimate of what the economy could produce at full employment. */
+  potentialOutput: number;
+  labourForce: number;
+  employed: number;
+  /** Slow-moving sentiment that shifts consumption and investment. */
+  confidence: number;
+  /** Rolling record used to compute year-on-year figures. */
+  priceIndexHistory: number[];
+}
+
+/** Sampled time series for charts and for balancing the game. */
+export interface MetricsState {
+  /** Tick at which each sample was taken. */
+  samples: Day[];
+  series: Record<string, number[]>;
+  capacity: number;
+}
+
+export interface CreditApplication {
+  id: string;
+  applicantId: EntityId;
+  lenderId: EntityId;
+  amount: Money;
+  termMonths: number;
+  purpose: 'workingCapital' | 'investment' | 'refinance' | 'mortgage' | 'consumer';
+  grade: CreditGrade;
+  pdAnnual: number;
+  submittedOn: Day;
+  expiresOn: Day;
+  status: 'pending' | 'approved' | 'declined' | 'expired';
+  /** Rate the bank offered, once underwritten. */
+  offeredRate?: number;
+  decisionReason?: string;
+}
+
+export interface WorldState {
+  /** Bumped when the shape changes, so saves can be migrated. */
+  version: number;
+  seed: number;
+  tick: Day;
+
+  entities: Record<EntityId, Entity>;
+  instruments: Record<string, Instrument>;
+  /** Instrument ids by holder and by obligor, kept in step by the helpers below. */
+  instrumentsByHolder: Record<EntityId, string[]>;
+  instrumentsByObligor: Record<EntityId, string[]>;
+  /** Last tick each resolved entity did something worth staying resolved for. */
+  lastInteraction: Record<EntityId, Day>;
+
+  ledger: LedgerState;
+  ids: IdCounters;
+
+  playerBankId: EntityId;
+  /** Aggregate stand-in for every other bank in the system. */
+  otherBanksId: EntityId;
+  centralBankId: EntityId;
+  governmentId: EntityId;
+
+  sectors: Record<string, Sector>;
+  regions: Record<string, Region>;
+
+  markets: MarketState;
+  economy: EconomyState;
+  applications: Record<string, CreditApplication>;
+  metrics: MetricsState;
+
+  config: SimConfig;
+}
+
+export const WORLD_VERSION = 1;
+
+export const DEFAULT_CONFIG: SimConfig = {
+  applicationValidityDays: 14,
+  demotionIdleDays: 120,
+  maxResolvedEntities: 1500,
+  lossGivenDefault: 0.45,
+  taylorInflationWeight: 1.2,
+  taylorOutputWeight: 0.5,
+  neutralRealRate: 0.005,
+  priceAdjustment: 0.006,
+  hiringAdjustment: 0.02,
+  corporationTaxRate: 0.25,
+  minimumCapitalRatio: 0.08,
+  minimumLiquidityRatio: 1.0,
+  depositProtectionLimit: 8_500_000 as Money, // £85,000
+};
+
+// --- accessors -------------------------------------------------------------
+
+export function getEntity(world: WorldState, id: EntityId): Entity {
+  const e = world.entities[id];
+  if (!e) throw new Error(`No entity "${id}"`);
+  return e;
+}
+
+export function tryGetEntity(world: WorldState, id: EntityId): Entity | undefined {
+  return world.entities[id];
+}
+
+export function addEntity<T extends Entity>(world: WorldState, entity: T): T {
+  world.entities[entity.id] = entity;
+  world.instrumentsByHolder[entity.id] ??= [];
+  world.instrumentsByObligor[entity.id] ??= [];
+  return entity;
+}
+
+export function removeEntity(world: WorldState, id: EntityId): void {
+  delete world.entities[id];
+  delete world.instrumentsByHolder[id];
+  delete world.instrumentsByObligor[id];
+  delete world.lastInteraction[id];
+}
+
+export function entitiesOfKind<K extends Entity['kind']>(
+  world: WorldState,
+  kind: K,
+): Extract<Entity, { kind: K }>[] {
+  const out: Extract<Entity, { kind: K }>[] = [];
+  for (const id in world.entities) {
+    const e = world.entities[id]!;
+    if (e.kind === kind) out.push(e as Extract<Entity, { kind: K }>);
+  }
+  return out;
+}
+
+export function resolvedCompanies(world: WorldState): Company[] {
+  return entitiesOfKind(world, 'company');
+}
+
+export function resolvedHouseholds(world: WorldState): Household[] {
+  return entitiesOfKind(world, 'household');
+}
+
+export function cohorts(world: WorldState): Cohort[] {
+  return entitiesOfKind(world, 'cohort');
+}
+
+export function playerBank(world: WorldState) {
+  const bank = getEntity(world, world.playerBankId);
+  if (bank.kind !== 'bank') throw new Error('playerBankId does not point at a bank');
+  return bank;
+}
+
+export function centralBank(world: WorldState) {
+  const cb = getEntity(world, world.centralBankId);
+  if (cb.kind !== 'centralBank') throw new Error('centralBankId does not point at a central bank');
+  return cb;
+}
+
+// --- instrument index ------------------------------------------------------
+
+export function addInstrument(world: WorldState, inst: Instrument): Instrument {
+  world.instruments[inst.id] = inst;
+  (world.instrumentsByHolder[inst.holderId] ??= []).push(inst.id);
+  (world.instrumentsByObligor[inst.obligorId] ??= []).push(inst.id);
+  return inst;
+}
+
+export function getInstrument(world: WorldState, id: string): Instrument {
+  const inst = world.instruments[id];
+  if (!inst) throw new Error(`No instrument "${id}"`);
+  return inst;
+}
+
+export function heldBy(world: WorldState, holderId: EntityId): Instrument[] {
+  return (world.instrumentsByHolder[holderId] ?? []).map((id) => world.instruments[id]!).filter(Boolean);
+}
+
+export function owedBy(world: WorldState, obligorId: EntityId): Instrument[] {
+  return (world.instrumentsByObligor[obligorId] ?? []).map((id) => world.instruments[id]!).filter(Boolean);
+}
+
+/** Reassign a claim to a new holder, keeping the index consistent. */
+export function transferHolder(world: WorldState, instId: string, newHolderId: EntityId): void {
+  const inst = getInstrument(world, instId);
+  const from = world.instrumentsByHolder[inst.holderId];
+  if (from) {
+    const idx = from.indexOf(instId);
+    if (idx >= 0) from.splice(idx, 1);
+  }
+  inst.holderId = newHolderId;
+  (world.instrumentsByHolder[newHolderId] ??= []).push(instId);
+}
+
+export function touch(world: WorldState, id: EntityId): void {
+  world.lastInteraction[id] = world.tick;
+}
+
+/**
+ * Drop finished contracts.
+ *
+ * Closed loans and redeemed bonds are kept around briefly so the UI can show
+ * what happened, then discarded -- otherwise a long game accumulates dead
+ * records and every scan over a bank's book gets slower for ever.
+ */
+export function pruneInstruments(world: WorldState, keepForDays: number): number {
+  const cutoff = world.tick - keepForDays;
+  let removed = 0;
+  for (const id of Object.keys(world.instruments)) {
+    const inst = world.instruments[id]!;
+    if (inst.status === 'active') continue;
+    const finishedOn = inst.maturesOn ?? inst.openedOn;
+    if (finishedOn > cutoff) continue;
+    detach(world.instrumentsByHolder[inst.holderId], id);
+    detach(world.instrumentsByObligor[inst.obligorId], id);
+    delete world.instruments[id];
+    delete world.markets.bondPrices[id];
+    removed++;
+  }
+  return removed;
+}
+
+function detach(list: string[] | undefined, id: string): void {
+  if (!list) return;
+  const index = list.indexOf(id);
+  if (index >= 0) list.splice(index, 1);
+}
+
+/** Clear out applications that were decided long ago. */
+export function pruneApplications(world: WorldState, keepForDays: number): number {
+  const cutoff = world.tick - keepForDays;
+  let removed = 0;
+  for (const id of Object.keys(world.applications)) {
+    const app = world.applications[id]!;
+    if (app.status === 'pending' || app.expiresOn > cutoff) continue;
+    delete world.applications[id];
+    removed++;
+  }
+  return removed;
+}
