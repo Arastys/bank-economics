@@ -3,7 +3,7 @@ import { isBusinessDay } from '../core/time.js';
 import { AC, type AccountCode } from '../ledger/accounts.js';
 import { balance, credit, debit, post, type LedgerState } from '../ledger/ledger.js';
 import { clearMarket, spendable, type MarketLeg } from '../world/transfer.js';
-import type { SimConfig, WorldState } from '../world/state.js';
+import { realRateGap, type SimConfig, type WorldState } from '../world/state.js';
 import { firmViews, householdViews, type FirmView } from '../agents/views.js';
 import { PHASE, defineSystem } from './system.js';
 
@@ -156,6 +156,7 @@ function shareDemand(
 
 function collectBuyers(world: WorldState, ledger: LedgerState, firms: FirmView[]): Buyer[] {
   const buyers: Buyer[] = [];
+  const rateGap = realRateGap(world);
 
   for (const household of householdViews(world)) {
     // Households budget from a smoothed income figure rather than from what
@@ -171,16 +172,21 @@ function collectBuyers(world: WorldState, ledger: LedgerState, firms: FirmView[]
       household.incomeRate,
       savings,
       world.config,
+      rateGap,
     );
     if (budget > 0) buyers.push({ id: household.id, budget, contra: AC.CONSUMPTION });
   }
 
+  const appetite = investmentAppetite(world);
   for (const firm of firms) {
     // Only firms with a month of wages in hand put money into capacity.
     const monthlyWages = scale((firm.employees * firm.wagePerEmployee) as Money, 21);
     const cash = spendable(world, ledger, firm.id);
     if (cash <= monthlyWages) continue;
-    const budget = min(round(firm.recentRevenue * world.config.investmentRate), (cash - monthlyWages) as Money);
+    const budget = min(
+      round(firm.recentRevenue * world.config.investmentRate * appetite),
+      (cash - monthlyWages) as Money,
+    );
     if (budget > 0) buyers.push({ id: firm.id, budget, contra: AC.FIXED_ASSETS });
   }
 
@@ -205,13 +211,51 @@ export function consumptionBudget(
   incomeRate: Money,
   savings: Money,
   config: SimConfig,
+  rateGap = 0,
 ): Money {
   const buffer = incomeRate * config.savingsBufferDays;
   const wanted = round(
-    propensityToConsume * incomeRate + config.savingsAdjustment * (savings - buffer),
+    propensityOutOfIncome(propensityToConsume, config, rateGap) * incomeRate +
+      config.savingsAdjustment * (savings - buffer),
   );
   // Nobody spends money they do not have, and nobody spends less than nothing.
   return min(atLeastZero(wanted), atLeastZero(savings));
+}
+
+/**
+ * The share of income a household spends rather than saves, once the return on
+ * saving is taken into account. This is the consumption half of monetary
+ * transmission.
+ *
+ * It shifts the saving *rate*, which is a flow, and deliberately not the
+ * target buffer, which is a stock. Re-targeting a stock looks equivalent and
+ * is not: asking for a tenth more buffer asks households to withhold eighteen
+ * days of income, all at once, and hand it back just as abruptly when rates
+ * fall. Built that way first, it gave the committee real traction and wrecked
+ * the economy doing it -- 8% unemployment at a sensitivity of 1 and 21% at 4,
+ * because a persistently positive real rate gap holds the stock target
+ * permanently high and that is a level effect, not a stabiliser.
+ *
+ * Bounded because the committee must not be able to switch spending off.
+ */
+export function propensityOutOfIncome(
+  base: number,
+  config: SimConfig,
+  rateGap: number,
+): number {
+  return Math.max(0.3, Math.min(1.2, base - config.savingsRateSensitivity * rateGap));
+}
+
+/**
+ * How keen firms are to put money into capacity, as a multiple of normal.
+ *
+ * Dear money postpones a capacity decision and cheap money brings it forward.
+ * Floored at zero because a firm cannot invest a negative amount, and capped
+ * because free money is not infinite appetite.
+ */
+export function investmentAppetite(world: WorldState): number {
+  const factor = 1 - world.config.investmentRateSensitivity * realRateGap(world);
+  return Math.max(0, Math.min(2, factor));
 }
 
 /**

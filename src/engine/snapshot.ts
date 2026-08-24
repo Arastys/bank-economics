@@ -45,6 +45,20 @@ migrations.set(1, (world) => {
   return world;
 });
 
+/**
+ * Nothing in the world read Bank Rate on the demand side, so the policy rate
+ * did not reach the economy. An old save gains the two transmission
+ * sensitivities at their defaults, which changes how it behaves from the tick
+ * it is loaded -- there is no way to carry forward a channel that was not
+ * there.
+ */
+migrations.set(2, (world) => {
+  const config = world.config as unknown as Record<string, unknown>;
+  config.investmentRateSensitivity = DEFAULT_CONFIG.investmentRateSensitivity;
+  config.savingsRateSensitivity = DEFAULT_CONFIG.savingsRateSensitivity;
+  return world;
+});
+
 export function load(json: string): WorldState {
   const snapshot = JSON.parse(json) as Snapshot;
   if (typeof snapshot?.version !== 'number' || !snapshot.world) {

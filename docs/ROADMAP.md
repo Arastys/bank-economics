@@ -132,6 +132,55 @@ Lower is better on score. `tests/consumption.test.ts` runs the economy for ten
 years and fails if the firm sector drains or unemployment runs away, so this
 particular hole cannot reopen unnoticed.
 
+## The committee cannot control inflation, and the rate is not why
+
+Bank Rate used to reach loan pricing, reserve remuneration and the yield curve
+and nothing else. No spending decision read it: firms borrowed to cover payroll
+regardless of cost, reinvested a fixed share of takings, and households saved
+towards a fixed buffer. Pinning the rate across a 900 basis point span moved
+inflation by 0.2 points, in the wrong direction — dearer credit raised firms'
+costs and the cost anchor passed them into prices, with nothing anywhere
+reducing demand. Four parameters describing the committee were tuning nothing,
+which is why a 4,992-run sweep found `taylorInflationWeight` among the most
+inert knobs in the model.
+
+`realRateGap()` is now that missing signal, and two channels read it:
+investment (`investmentRateSensitivity`) and consumption
+(`savingsRateSensitivity`).
+
+**It was necessary and it is not sufficient.** With both channels wired and
+correctly signed, the committee's grip is about 0.1–0.2 points of inflation
+between a rate pinned at zero and the Taylor rule — noise. Restraining demand
+in this economy does not lower prices, it lowers output:
+
+| saving sensitivity | inflation | unemployment | gross margin |
+| ---: | ---: | ---: | ---: |
+| 0 | 3.74% | 3.23% | 5.78% |
+| 0.5 | 3.72% | 3.57% | 6.52% |
+| 1 | 4.26% | 4.96% | 7.19% |
+| 2 | 6.19% | 7.59% | 10.19% |
+
+Inflation goes *up* as demand is restrained. That is stagflation, and it is
+structural: the price level here is set by costs. The cost anchor holds prices
+at unit cost, wages are indexed to inflation and to labour tightness, and
+`maxMonthlyWageCut` stops them falling fast. So less spending means fewer
+goods at the same price, not the same goods cheaper. **The missing link is not
+the rate reaching demand. It is demand reaching prices.**
+
+The consumption channel therefore ships switched off — built, tested and swept,
+worth turning on the day the wage-price block responds to slack. The investment
+channel ships at 2, which costs 2.5±1.1 points of score at ten years and
+−0.6±12.0 at twenty: the ten-year cost is the channel amplifying the settling
+excursion, not a standing one.
+
+A first attempt built the consumption channel against the target buffer rather
+than the saving rate. That is a stock, not a flow: asking for a tenth more
+buffer asks households to withhold eighteen days of income at once and hand it
+back as abruptly when rates fall. It gave the committee enormous apparent grip
+— inflation 10.2% at a pinned rate against 1.0% under the Taylor rule — by
+wrecking the economy to get it, at 21% unemployment. Worth remembering the next
+time a stabiliser looks powerful.
+
 ## Known open problem
 
 Splitting a cohort into several identical cohorts changes aggregate outcomes.

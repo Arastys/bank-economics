@@ -64,6 +64,14 @@ export interface SimConfig {
   /** Share of takings a comfortable firm puts back into capacity. */
   investmentRate: number;
   /**
+   * How much dear money postpones a capacity decision.
+   *
+   * The share of takings a firm reinvests is multiplied by
+   * `1 - this * realRateGap`, so at 4 a 250bp real tightening cuts investment
+   * spending by a tenth. Zero disconnects the investment channel.
+   */
+  investmentRateSensitivity: number;
+  /**
    * The buffer of savings households aim to hold, in days of income.
    *
    * Without a target, a fixed saving rate is a permanent leak: households put
@@ -74,6 +82,24 @@ export interface SimConfig {
   savingsBufferDays: number;
   /** Daily share of the gap to the buffer households close. */
   savingsAdjustment: number;
+  /**
+   * How much a better return on savings makes households hold back.
+   *
+   * Subtracted from the propensity to consume as `base - this * realRateGap`,
+   * so at 2 a 250bp real tightening moves a household spending 95p in the
+   * pound to 90p. It shifts the saving rate, which is a flow, and not the
+   * target buffer, which is a stock -- see `propensityOutOfIncome`.
+   *
+   * Defaults to zero, which is the honest reading of the evidence rather than
+   * a missing feature. Restraining consumption in this economy raises
+   * unemployment without lowering inflation, because the price level here is
+   * set by costs: the cost anchor and downward wage rigidity floor prices, so
+   * less spending buys less output at the same price. At a sensitivity of 1,
+   * inflation goes *up* 0.5 points and unemployment up 1.7. The channel is
+   * built, tested and swept, and it is worth turning on the day wages respond
+   * to slack.
+   */
+  savingsRateSensitivity: number;
   /** How quickly households' smoothed income follows actual receipts. */
   incomeSmoothing: number;
   /** Share of the population in the labour market. */
@@ -220,7 +246,7 @@ export interface WorldState {
   config: SimConfig;
 }
 
-export const WORLD_VERSION = 2;
+export const WORLD_VERSION = 3;
 
 export const DEFAULT_CONFIG: SimConfig = {
   applicationValidityDays: 14,
@@ -241,8 +267,10 @@ export const DEFAULT_CONFIG: SimConfig = {
   minMarkup: -0.05,
   priceElasticity: 2.5,
   investmentRate: 0.15,
+  investmentRateSensitivity: 2,
   savingsBufferDays: 180,
   savingsAdjustment: 0.01,
+  savingsRateSensitivity: 0,
   incomeSmoothing: 0.15,
   labourParticipation: 0.96,
   neutralTightness: 0.97,
@@ -328,6 +356,27 @@ export function centralBank(world: WorldState) {
   const cb = getEntity(world, world.centralBankId);
   if (cb.kind !== 'centralBank') throw new Error('centralBankId does not point at a central bank');
   return cb;
+}
+
+/**
+ * How far the real cost of money sits above the rate the economy is used to.
+ *
+ * Positive is tight money, negative is loose, zero is neutral.
+ *
+ * This is the signal the policy rate reaches the real economy through, and
+ * until something read it there was none. Bank Rate priced loans, remunerated
+ * reserves and set the yield curve, but no spending decision anywhere looked
+ * at it: firms borrowed to cover payroll, invested a fixed share of takings
+ * and households saved towards a fixed buffer, none of which cared what money
+ * cost. Pinning Bank Rate across a 900 basis point span moved inflation by
+ * 0.2 points, and in the wrong direction -- dearer credit raised firms' costs
+ * and the cost anchor passed them into prices, with nothing anywhere reducing
+ * demand. A committee whose decisions do not reach the economy is a
+ * decoration, and four parameters that describe it were tuning nothing.
+ */
+export function realRateGap(world: WorldState): number {
+  const cb = centralBank(world);
+  return cb.bankRate - world.economy.inflationAnnual - world.config.neutralRealRate;
 }
 
 // --- instrument index ------------------------------------------------------
