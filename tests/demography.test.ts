@@ -43,7 +43,7 @@ describe('people are born, grow up, work, retire and die', () => {
     expect(heads(engine.world) / before).toBeCloseTo(1, 2);
   }, 120_000);
 
-  it('grows when people are getting better off and shrinks when they are not', () => {
+  it('amplifies prosperity into the population, and is exactly replacement at zero', () => {
     const run = (fertilityProsperity: number) => {
       const engine = newGame('uk2025');
       Object.assign(engine.world.config, { fertilityProsperity });
@@ -51,10 +51,24 @@ describe('people are born, grow up, work, retire and die', () => {
       engine.run(365 * 18);
       return heads(engine.world) / before;
     };
-    // The economy's real income per worker drifts down, so a stronger response
-    // to prosperity must move the population the other way from a weaker one.
-    expect(run(4)).toBeGreaterThan(run(0.5));
-  }, 180_000);
+
+    // At zero the prosperity term is 1 whatever the economy does, so births are
+    // one per worker per working lifetime: exact replacement.
+    const neutral = run(0);
+    expect(neutral).toBeGreaterThan(0.98);
+    expect(neutral).toBeLessThan(1.02);
+
+    // Which way prosperity sits is an emergent property of the economy and has
+    // flipped before -- removing the job leak in `risk.credit` put more workers
+    // against the same output, so real income per worker now drifts down where
+    // it used to drift up. What the exponent must do is not flip: it amplifies
+    // whatever direction prosperity is pointing, so a strong response has to be
+    // further from replacement than a weak one on the same side.
+    const weak = run(0.5);
+    const strong = run(4);
+    expect(Math.abs(strong - neutral)).toBeGreaterThan(Math.abs(weak - neutral));
+    expect(Math.sign(strong - neutral)).toBe(Math.sign(weak - neutral));
+  }, 240_000);
 
   /**
    * A pool holds one account between its members, so a death leaves the

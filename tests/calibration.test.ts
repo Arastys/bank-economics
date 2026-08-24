@@ -178,7 +178,6 @@ describe('parameter definitions', () => {
       'MONTHS_PER_YEAR',
       'REVIEW_CYCLE',
       'SWEEP_INTERVAL',
-      'COHORT_CHURN',
       'DEBT_SERVICE_HORIZON',
       'MIN_WINDOW_DAYS',
       'TRUST_WINDOW_DAYS',
