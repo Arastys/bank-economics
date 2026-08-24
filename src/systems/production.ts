@@ -2,7 +2,7 @@ import { ZERO, allocate, atLeastZero, min, sub, type Money } from '../core/money
 import { isBusinessDay } from '../core/time.js';
 import { AC } from '../ledger/accounts.js';
 import { clearMarket, spendable, type MarketLeg } from '../world/transfer.js';
-import { firmViews, personViews, totalWageBill, type PersonView } from '../agents/views.js';
+import { firmViews, personViews, totalWageBill, type FirmView, type PersonView } from '../agents/views.js';
 import { owedBy, type WorldState } from '../world/state.js';
 import { PHASE, defineSystem } from './system.js';
 
@@ -14,6 +14,27 @@ import { PHASE, defineSystem } from './system.js';
  * A firm that cannot meet its wage bill produces proportionately less and
  * registers a funding need -- which is where most credit demand comes from.
  */
+/**
+ * Put the economy's jobs into the hands of the people holding them.
+ *
+ * Shared across every pool in proportion to working-age population, and
+ * deliberately not by region. Firms hire against one economy-wide slack
+ * figure, so a region's firms can already take on more staff than that region
+ * has people; filling jobs regionally on top of that would cap the excess and
+ * quietly lose it, and the pools would then read 13% unemployment while the
+ * economy read 0.75%. A regional labour market is a real thing to want, but it
+ * has to start on the hiring side.
+ */
+function fillJobs(pools: PersonView[], jobs: number): void {
+  const available = pools.reduce((total, p) => total + p.workingAge, 0);
+  if (available <= 0) {
+    for (const pool of pools) pool.employed = 0;
+    return;
+  }
+  const fill = Math.min(1, jobs / available);
+  for (const pool of pools) pool.employed = pool.workingAge * fill;
+}
+
 export const productionSystem = defineSystem({
   id: 'economy.production',
   phase: PHASE.PRODUCTION,
@@ -35,6 +56,14 @@ export const productionSystem = defineSystem({
     const receipts = new Map<string, number>();
     let outputUnits = 0;
     let employed = 0;
+
+    // Produce first, then work out who is in work, then pay them. The middle
+    // step used to be missing: `pool.employed` was set once when the scenario
+    // was built and only ever moved when somebody was materialised out of a
+    // pool, so hiring and firing never reached the people doing the jobs.
+    // Wages were shared out by a fixed set of weights and a pool's spending
+    // decision could not tell a boom from a slump.
+    const payrolls: { firm: FirmView; paid: Money }[] = [];
 
     for (const firm of firmViews(world)) {
       if (firm.employees <= 0) continue;
@@ -60,7 +89,12 @@ export const productionSystem = defineSystem({
         company.fundingNeed = shortfall > 0 ? (Math.max(company.fundingNeed, shortfall * 20) as Money) : ZERO;
       }
 
-      if (paid <= 0) continue;
+      if (paid > 0) payrolls.push({ firm, paid });
+    }
+
+    fillJobs(people, employed);
+
+    for (const { firm, paid } of payrolls) {
       payers.push({ id: firm.id, amount: paid, contra: AC.INVENTORY });
 
       // Wages go to people where the firm actually is, weighted by how
