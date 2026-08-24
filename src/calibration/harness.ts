@@ -1,6 +1,7 @@
 import { Engine } from '../engine/engine.js';
 import { buildWorld } from '../scenarios/build.js';
 import { uk2025 } from '../scenarios/uk2025.js';
+import type { ScenarioSpec } from '../scenarios/types.js';
 import { seriesOf } from '../metrics/recorder.js';
 import { AC } from '../ledger/accounts.js';
 import { naturalBalance } from '../ledger/ledger.js';
@@ -12,6 +13,13 @@ export interface CalibrationJob {
   years: number;
   /** Config values to override for this run. */
   overrides?: Partial<SimConfig>;
+  /**
+   * Scenario fields to override: the shape of the starting world rather than
+   * the rules it runs under. Needed for anything that varies how the economy
+   * is built -- how finely cohorts are split, how many customers the bank
+   * starts with -- which no amount of SimConfig can reach.
+   */
+  scenario?: Partial<ScenarioSpec>;
   /** Optional label carried through to the result. */
   label?: string;
 }
@@ -28,10 +36,11 @@ export interface JobResult {
  * spread across worker threads without any shared state.
  */
 export function runJob(job: CalibrationJob): JobResult {
-  const spec = {
+  const spec: ScenarioSpec = {
     ...uk2025,
+    ...job.scenario,
     seed: job.seed,
-    config: { ...uk2025.config, ...job.overrides },
+    config: { ...uk2025.config, ...job.scenario?.config, ...job.overrides },
   };
   const world = buildWorld(spec);
   // Balance still gets checked, just not on every one of several thousand

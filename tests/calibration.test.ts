@@ -118,6 +118,31 @@ describe('scoring', () => {
   });
 });
 
+describe('what a job can vary', () => {
+  it('varies the rules through config overrides', () => {
+    const base = runJob({ seed: 4242, years: 1 }).summary;
+    const changed = runJob({ seed: 4242, years: 1, overrides: { investmentRate: 0.05 } }).summary;
+    expect(changed.inflation.mean).not.toBe(base.inflation.mean);
+  });
+
+  /**
+   * Some questions are about the shape of the starting world rather than the
+   * rules it runs under -- how finely cohorts are split, how many customers
+   * the bank opens with -- and no amount of SimConfig reaches those.
+   */
+  it('varies the starting world through scenario overrides', () => {
+    const base = runJob({ seed: 4242, years: 1, scenario: { cohortSubdivision: 1 } }).summary;
+    const split = runJob({ seed: 4242, years: 1, scenario: { cohortSubdivision: 8 } }).summary;
+    expect(split.inflation.mean).not.toBe(base.inflation.mean);
+  });
+
+  it('leaves the scenario alone when nothing is overridden', () => {
+    const a = runJob({ seed: 4242, years: 1 }).summary;
+    const b = runJob({ seed: 4242, years: 1, scenario: {} }).summary;
+    expect(b.inflation.mean).toBe(a.inflation.mean);
+  });
+});
+
 describe('parameter definitions', () => {
   it('only sweeps parameters that exist, with the baseline inside its range', () => {
     for (const parameter of PARAMETERS) {
