@@ -34,7 +34,21 @@ export interface RegulatoryMetrics {
   centralBankFunding: Money;
 }
 
-export function regulatoryMetrics(world: WorldState, ledger: LedgerState, bankId: EntityId): RegulatoryMetrics {
+export interface MetricsOptions {
+  /**
+   * Whether to work out FSCS-covered deposits, which means walking every
+   * depositor in the economy. Worth it for a monthly report; pure waste on the
+   * per-tick capital check the credit committee does.
+   */
+  includeDepositProtection?: boolean;
+}
+
+export function regulatoryMetrics(
+  world: WorldState,
+  ledger: LedgerState,
+  bankId: EntityId,
+  options: MetricsOptions = {},
+): RegulatoryMetrics {
   const sheet = balanceSheet(ledger, bankId);
   const cet1 = sheet.totalEquity;
 
@@ -86,7 +100,8 @@ export function regulatoryMetrics(world: WorldState, ledger: LedgerState, bankId
     hqla: round(hqla),
     netOutflows: round(netOutflows),
     lcr: netOutflows > 0 ? hqla / netOutflows : hqla > 0 ? 10 : 0,
-    protectedDeposits: protectedDeposits(world, ledger, bankId),
+    protectedDeposits:
+      options.includeDepositProtection === false ? ZERO : protectedDeposits(world, ledger, bankId),
     centralBankFunding: naturalBalance(ledger, bankId, AC.CENTRAL_BANK_FUNDING),
   };
 }

@@ -25,6 +25,12 @@ export interface EngineOptions {
    * than a slow drift nobody notices for an hour.
    */
   checkInvariants?: boolean;
+  /**
+   * How often to run that check. Every tick by default. Bulk calibration runs
+   * turn it down, since the check walks every account in the economy and the
+   * point there is throughput, not forensics.
+   */
+  checkInvariantsEvery?: number;
   /** How many recent events to keep for the activity feed. */
   activityLimit?: number;
 }
@@ -52,6 +58,7 @@ export class Engine {
     registerBuiltinInstruments();
     this.options = {
       checkInvariants: options.checkInvariants ?? true,
+      checkInvariantsEvery: Math.max(1, options.checkInvariantsEvery ?? 1),
       activityLimit: options.activityLimit ?? 200,
     };
   }
@@ -98,7 +105,7 @@ export class Engine {
     const events = this.bus.drainJournal();
     this.remember(events);
 
-    if (this.options.checkInvariants) {
+    if (this.options.checkInvariants && world.tick % this.options.checkInvariantsEvery === 0) {
       const residual = trialBalance(world.ledger);
       if (residual !== 0) throw new LedgerImbalanceError(world.tick, residual);
     }

@@ -93,8 +93,11 @@ export const creditRiskSystem = defineSystem({
       if (cohort.memberKind !== 'company' || cohort.count <= 0) continue;
       const churn = cohort.count * COHORT_CHURN * (1 - Math.min(0.8, world.economy.outputGap * 2));
       if (churn > 0 && bernoulli(rng, Math.min(0.5, churn))) {
-        // Net effect on the pool is neutral in the long run; the point is that
-        // headcount and stock move around rather than sitting still.
+        // NOTE: this only sheds headcount. It is not firm demography -- nothing
+        // in the model creates firms, so `cohort.count` only ever falls, and the
+        // firm population declines by roughly 0.7% a year with no offsetting
+        // births. Invisible over a two-year game, corrosive over twenty.
+        // See docs/ROADMAP.md.
         const shed = Math.max(1, Math.round(cohort.count * 0.001));
         cohort.pool.employees = Math.max(0, (cohort.pool.employees ?? 0) - shed);
       }

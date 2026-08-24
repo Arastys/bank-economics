@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "sim": "npm run build && node dist/src/cli.js",
-    "ui": "npm run build && node scripts/serve.js"
+    "ui": "npm run build && node scripts/serve.js",
+    "calibrate": "npm run build && node scripts/calibrate.js"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",

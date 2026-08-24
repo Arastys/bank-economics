@@ -25,19 +25,26 @@ slots in without renumbering.
 | 200 | `markets.rates` | Yield curve, credit spreads, bond prices |
 | 300 | `economy.production` | Firms produce; wages paid to households |
 | 350 | `economy.goodsMarket` | Demand meets output; prices move |
-| 400 | `firms.decisions` | Monthly hiring, pay, funding needs |
+| 400 | `firms.decisions` | Monthly pay, hiring against labour supply, funding needs |
 | 450 | `credit.demand` | Applications arrive; latent firms are materialised |
 | 500 | `credit.underwriting` | The credit committee decides |
 | 600 | `instruments.lifecycle` | Accrue, pay, mature — every contract |
 | 700 | `risk.credit` | Re-score borrowers; decide who fails |
 | 800 | `bank.treasury` | Reserve management against the central bank |
 | 850 | `lod.sweep` | Fold idle entities away; prune dead records |
-| 900 | `accounting.periods` | Operating costs, depreciation, tax, period close |
+| 900 | `accounting.periods` | Operating costs and depreciation |
 | 950 | `metrics.record` | Monthly time series and prudential ratios |
+| 980 | `accounting.yearEnd` | Tax, public spending, the annual close |
 
-Order matters in places and the phases encode it: firms must be paid before
-they can spend, contracts must accrue before they can be repaid, and the books
-must be closed before they are measured.
+Order matters in places and the phases encode it: firms must be paid before they
+can spend, contracts must accrue before they can be repaid, and the books must
+be measured before they are closed — closing zeroes every P&L account, so a
+December snapshot taken afterwards would report a year of trading as nil.
+
+Ordering also has teeth. Wages are paid at 300 and debt service falls due at
+600, so a firm that spends everything on payroll starves its own loan payments
+and falls into arrears on a bill it could have met. `production` therefore holds
+back whatever is due to lenders in the next few days before paying wages.
 
 ## Money
 

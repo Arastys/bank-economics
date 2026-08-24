@@ -47,6 +47,12 @@ export const metricsSystem = defineSystem({
       reserves: naturalBalance(ledger, bank.id, AC.RESERVES),
       centralBankFunding: reg.centralBankFunding,
       profitYtd: pl.profit,
+      interestIncome: naturalBalance(ledger, bank.id, AC.INTEREST_INCOME),
+      interestExpense: naturalBalance(ledger, bank.id, AC.INTEREST_EXPENSE),
+      operatingExpense: naturalBalance(ledger, bank.id, AC.OPERATING_EXPENSE),
+      earningAssets: naturalBalance(ledger, bank.id, AC.LOANS) +
+        naturalBalance(ledger, bank.id, AC.BONDS) +
+        naturalBalance(ledger, bank.id, AC.RESERVES),
       impairments: naturalBalance(ledger, bank.id, AC.IMPAIRMENT),
       nplRatio: loanBook > 0 ? nonPerforming / loanBook : 0,
       protectedDeposits: reg.protectedDeposits,

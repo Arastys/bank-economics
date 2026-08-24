@@ -32,6 +32,52 @@ export interface SimConfig {
   priceAdjustment: number;
   /** How fast firms adjust headcount. */
   hiringAdjustment: number;
+  /** Sell-through firms aim for. Above it they raise prices, below they cut. */
+  targetSellThrough: number;
+  /** Days of stock a firm is comfortable holding. */
+  targetStockDays: number;
+  /** How much of the price signal is today's counter versus the stockroom. */
+  demandPriceWeight: number;
+  /** How sharply buyers prefer cheaper sellers. */
+  priceElasticity: number;
+  /** Share of takings a comfortable firm puts back into capacity. */
+  investmentRate: number;
+  /** Daily share of savings households run down. */
+  dissavingRate: number;
+  /** How quickly households' smoothed income follows actual receipts. */
+  incomeSmoothing: number;
+  /** Share of the population in the labour market. */
+  labourParticipation: number;
+  /** Employment rate at which the labour market bids wages up. */
+  neutralTightness: number;
+  /** How much of last month's inflation firms pass into pay. */
+  wageIndexation: number;
+  /** How strongly a tight or slack labour market moves pay. */
+  wageTightnessResponse: number;
+  /**
+   * Most pay can fall in a month. Nominal wages are sticky downward in
+   * reality, and without that floor a slack labour market drives a
+   * self-reinforcing wage-price spiral straight into the ground.
+   */
+  maxMonthlyWageCut: number;
+  /** Most pay can rise in a month. */
+  maxMonthlyWageRise: number;
+  /** Monthly depreciation of fixed assets. */
+  depreciationPerMonth: number;
+  /** How much of the previous Bank Rate carries into the next decision. */
+  policySmoothing: number;
+  /** Ceiling on Bank Rate. */
+  maxBankRate: number;
+  /** Chance per latent firm per business day of wanting to borrow. */
+  cohortApplicationRate: number;
+  /** Chance a firm banking elsewhere approaches the player instead. */
+  shopAroundChance: number;
+  /** Ceiling on new applications reaching the desk each day. */
+  maxNewApplicationsPerDay: number;
+  /** Missed payments tolerated before a loan is written off. */
+  arrearsLimit: number;
+  /** What a forced sale of a failed firm's assets loses against book value. */
+  liquidationHaircut: number;
   /** Corporation tax rate applied at year end. */
   corporationTaxRate: number;
   /** Regulatory minimums, reported but not yet enforced. */
@@ -144,6 +190,27 @@ export const DEFAULT_CONFIG: SimConfig = {
   neutralRealRate: 0.005,
   priceAdjustment: 0.006,
   hiringAdjustment: 0.02,
+  targetSellThrough: 0.95,
+  targetStockDays: 8,
+  demandPriceWeight: 0.7,
+  priceElasticity: 2.5,
+  investmentRate: 0.15,
+  dissavingRate: 0.0001,
+  incomeSmoothing: 0.15,
+  labourParticipation: 0.96,
+  neutralTightness: 0.97,
+  wageIndexation: 0.6,
+  wageTightnessResponse: 0.3,
+  maxMonthlyWageCut: 0.002,
+  maxMonthlyWageRise: 0.02,
+  depreciationPerMonth: 1 / 120,
+  policySmoothing: 0.85,
+  maxBankRate: 0.12,
+  cohortApplicationRate: 0.0006,
+  shopAroundChance: 0.35,
+  maxNewApplicationsPerDay: 8,
+  arrearsLimit: 3,
+  liquidationHaircut: 0.4,
   corporationTaxRate: 0.25,
   minimumCapitalRatio: 0.08,
   minimumLiquidityRatio: 1.0,

@@ -15,9 +15,10 @@ so that features can be added without redesigning what is already here.
 
 ```bash
 npm install
-npm test          # 47 tests, including the accounting invariants
-npm run sim -- 730  # run two years headless and print the results
-npm run ui        # dashboard at http://localhost:5173/ui/index.html
+npm test                       # unit tests, invariants and macro guard rails
+npm run sim -- 730             # two years headless, printed
+npm run ui                     # dashboard at localhost:5173/ui/index.html
+node scripts/calibrate.js score  # how balanced is the economy right now?
 ```
 
 ## What is already modelled
@@ -29,6 +30,7 @@ npm run ui        # dashboard at http://localhost:5173/ui/index.html
 | **Companies** | Production, hiring and firing, pricing, stock, investment, borrowing, distress and insolvency with asset recoveries. |
 | **Households** | Wages, consumption out of smoothed income and savings, deposits, mortgages held elsewhere. |
 | **Markets** | A goods market that clears on price, a gilt curve, credit spreads, an interbank rate. |
+| **Labour** | A supply constraint on hiring, and pay that follows prices and labour-market tightness with downward nominal rigidity. |
 | **Policy** | A Monetary Policy Committee setting Bank Rate off inflation and the output gap; a state that taxes and spends. |
 | **Regulation** | CET1, risk-weighted assets, capital and leverage ratios, LCR, FSCS-covered deposits — computed and reported, not yet enforced. |
 
@@ -152,13 +154,29 @@ demand softens, prices and employment fall, the MPC cuts, activity recovers,
 inflation returns and rates rise. The bank makes losses through the downturn
 and profits through the recovery.
 
-Known rough edges, all of them tuning rather than structure:
+### Balancing it
 
-- **Economic balance is approximate.** The cycle is stable but its amplitude is
-  larger than it should be, and the first year runs deflationary. Everything
-  that drives it is in `DEFAULT_CONFIG` and the scenario file.
-- **Impairments run hot.** Around 10–14% of the loan book a year in a downturn,
-  where reality is low single digits.
+Economic balance is measurable rather than a matter of opinion:
+`scripts/calibrate.js` scores a run against targets, sweeps parameters to find
+which ones actually move the score, and searches over the handful that do. See
+`docs/CALIBRATION.md`. Every tuning knob lives in `SimConfig`; if you need a
+magic number inside a system, put it there instead, or the sweep cannot see it.
+
+Known rough edges:
+
+- **Cost of risk is far too high** — around 18% of the loan book a year against
+  low single digits in reality, and by a distance the largest single item on the
+  scorecard. The cause is diagnosed: roughly 80% of the bank's losses begin with
+  a borrower defaulting on a facility held by a *different* lender, which then
+  cross-defaults ours.
+- **Inflation is volatile** (~9% standard deviation) and averages slightly
+  negative. Part of this is structural: the MPC reacts to year-on-year
+  inflation, which lags the cycle badly.
+- **No firm or household demography.** Firms fail but none are ever created, so
+  the population falls about 0.7% a year with nothing offsetting it. Household
+  numbers never change at all.
+- **All firms behave identically.** They differ in size, sector and outcome, but
+  every one of them runs the same decision rules with the same parameters.
 - **Throughput** is fine for play and slow for large batch balancing runs. The
   goods market and the per-borrower credit review dominate the tick.
 - **Regulation is reported, not enforced.** Breaching capital raises an event

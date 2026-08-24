@@ -31,7 +31,9 @@ export const underwritingSystem = defineSystem({
     // The capital position is read once per pass rather than per application:
     // recomputing it for every case on the desk dominates the tick, and the
     // committee working from this morning's figures is realistic anyway.
-    const snapshot = regulatoryMetrics(world, ctx.ledger, world.playerBankId);
+    const snapshot = regulatoryMetrics(world, ctx.ledger, world.playerBankId, {
+      includeDepositProtection: false,
+    });
 
     for (const id of Object.keys(world.applications)) {
       const app = world.applications[id]!;

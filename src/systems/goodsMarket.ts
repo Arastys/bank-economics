@@ -3,31 +3,12 @@ import { isBusinessDay } from '../core/time.js';
 import { AC, type AccountCode } from '../ledger/accounts.js';
 import { balance, credit, debit, post, type LedgerState } from '../ledger/ledger.js';
 import { clearMarket, spendable, type MarketLeg } from '../world/transfer.js';
-import type { WorldState } from '../world/state.js';
+import type { SimConfig, WorldState } from '../world/state.js';
 import { firmViews, householdViews, type FirmView } from '../agents/views.js';
 import { PHASE, defineSystem } from './system.js';
 
-/** Daily share of accumulated savings households run down. About 4% a year. */
-const DISSAVING_RATE = 0.0001;
-/** How quickly the smoothed income figure follows actual receipts. */
-const INCOME_SMOOTHING = 0.15;
-/** Sell-through firms are aiming for. Above it they raise prices, below they cut. */
-const TARGET_SELL_THROUGH = 0.95;
-/** Days of stock a firm is comfortable holding. */
-const TARGET_STOCK_DAYS = 8;
-/** How much of the price signal comes from today's counter versus the stockroom. */
-const DEMAND_WEIGHT = 0.7;
-/**
- * How sharply buyers prefer cheaper sellers. Strict cheapest-first would be
- * elasticity infinity, which starves every firm above the marginal price of
- * all custom -- their expected sales collapse, they stop putting stock out and
- * never recover. Real buyers spread out, so demand does too.
- */
-const PRICE_ELASTICITY = 2.5;
 /** Five working days in seven. */
 const BUSINESS_DAY_SHARE = 5 / 7;
-/** Share of takings a comfortable firm puts back into capacity. */
-const INVESTMENT_RATE = 0.15;
 /** History kept for year-on-year inflation. */
 const PRICE_HISTORY = 400;
 
@@ -75,14 +56,14 @@ export const goodsMarketSystem = defineSystem({
         offered: Math.min(
           firm.inventoryUnits,
           Math.max(
-            firm.expectedSales / TARGET_SELL_THROUGH,
+            firm.expectedSales / world.config.targetSellThrough,
             firm.employees * firm.productivity * BUSINESS_DAY_SHARE,
           ),
         ),
       }))
       .filter((o) => o.offered > 0);
 
-    const wanted = shareDemand(offers, totalBudget);
+    const wanted = shareDemand(offers, totalBudget, world.config.priceElasticity);
 
     let unitsSold = 0;
     let priceWeightedUnits = 0;
@@ -105,7 +86,7 @@ export const goodsMarketSystem = defineSystem({
       firm.recentRevenue = round(firm.recentRevenue * 0.8 + revenue * 0.2);
       unitsSold += units;
       priceWeightedUnits += units * firm.price;
-      if (isBusinessDay(tick)) adjustPrice(firm, units, offered, stock, world.config.priceAdjustment);
+      if (isBusinessDay(tick)) adjustPrice(firm, units, offered, stock, world.config);
     });
 
     if (totalRevenue > 0) {
@@ -147,6 +128,7 @@ export const goodsMarketSystem = defineSystem({
 function shareDemand(
   offers: { firm: FirmView; offered: number }[],
   budget: Money,
+  elasticity: number,
 ): number[] {
   if (offers.length === 0 || budget <= 0) return offers.map(() => 0);
 
@@ -160,7 +142,7 @@ function shareDemand(
   if (averagePrice <= 0) return offers.map(() => 0);
 
   const desired = offers.map(({ firm, offered }) =>
-    offered * Math.pow(averagePrice / firm.price, PRICE_ELASTICITY),
+    offered * Math.pow(averagePrice / firm.price, elasticity),
   );
   let desiredValue = 0;
   offers.forEach(({ firm }, i) => {
@@ -180,10 +162,13 @@ function collectBuyers(world: WorldState, ledger: LedgerState, firms: FirmView[]
     // landed today. Otherwise spending collapses every weekend, firms see
     // wild swings in sell-through, and prices oscillate for no real reason.
     household.incomeRate = round(
-      household.incomeRate * (1 - INCOME_SMOOTHING) + household.lastIncome * INCOME_SMOOTHING,
+      household.incomeRate * (1 - world.config.incomeSmoothing) +
+        household.lastIncome * world.config.incomeSmoothing,
     );
     const savings = spendable(world, ledger, household.id);
-    const wanted = round(household.propensityToConsume * household.incomeRate + DISSAVING_RATE * savings);
+    const wanted = round(
+      household.propensityToConsume * household.incomeRate + world.config.dissavingRate * savings,
+    );
     const budget = min(wanted, atLeastZero(savings));
     if (budget > 0) buyers.push({ id: household.id, budget, contra: AC.CONSUMPTION });
   }
@@ -193,7 +178,7 @@ function collectBuyers(world: WorldState, ledger: LedgerState, firms: FirmView[]
     const monthlyWages = scale((firm.employees * firm.wagePerEmployee) as Money, 21);
     const cash = spendable(world, ledger, firm.id);
     if (cash <= monthlyWages) continue;
-    const budget = min(round(firm.recentRevenue * INVESTMENT_RATE), (cash - monthlyWages) as Money);
+    const budget = min(round(firm.recentRevenue * world.config.investmentRate), (cash - monthlyWages) as Money);
     if (budget > 0) buyers.push({ id: firm.id, budget, contra: AC.FIXED_ASSETS });
   }
 
@@ -230,18 +215,24 @@ function recogniseCostOfSales(
  * second stops a firm holding a price that is quietly building a mountain of
  * unsold goods.
  */
-function adjustPrice(firm: FirmView, sold: number, offered: number, stock: number, step: number): void {
+function adjustPrice(
+  firm: FirmView,
+  sold: number,
+  offered: number,
+  stock: number,
+  config: SimConfig,
+): void {
   const sellThrough = offered > 0 ? sold / offered : 1;
-  const demandGap = clampUnit((sellThrough - TARGET_SELL_THROUGH) / TARGET_SELL_THROUGH);
+  const demandGap = clampUnit((sellThrough - config.targetSellThrough) / config.targetSellThrough);
 
   // Days of stock is measured against what the firm sells, not what it makes.
   // Against output it would be self-reinforcing: cutting production raises the
   // ratio, which calls for cutting production again.
-  const stockDays = firm.expectedSales > 0 ? stock / firm.expectedSales : TARGET_STOCK_DAYS;
-  const stockGap = clampUnit((TARGET_STOCK_DAYS - stockDays) / TARGET_STOCK_DAYS);
+  const stockDays = firm.expectedSales > 0 ? stock / firm.expectedSales : config.targetStockDays;
+  const stockGap = clampUnit((config.targetStockDays - stockDays) / config.targetStockDays);
 
-  const move = DEMAND_WEIGHT * demandGap + (1 - DEMAND_WEIGHT) * stockGap;
-  firm.price = Math.max(1, Math.round(firm.price * (1 + step * move))) as Money;
+  const move = config.demandPriceWeight * demandGap + (1 - config.demandPriceWeight) * stockGap;
+  firm.price = Math.max(1, Math.round(firm.price * (1 + config.priceAdjustment * move))) as Money;
 }
 
 function clampUnit(value: number): number {

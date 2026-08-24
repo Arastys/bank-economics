@@ -3,6 +3,7 @@ import { isBusinessDay } from '../core/time.js';
 import { AC } from '../ledger/accounts.js';
 import { clearMarket, spendable, type MarketLeg } from '../world/transfer.js';
 import { firmViews, householdViews, totalWageBill, type HouseholdView } from '../agents/views.js';
+import { owedBy, type WorldState } from '../world/state.js';
 import { PHASE, defineSystem } from './system.js';
 
 /** Share of the population in the labour market. Mirrors the hiring system. */
@@ -41,8 +42,13 @@ export const productionSystem = defineSystem({
     for (const firm of firmViews(world)) {
       if (firm.employees <= 0) continue;
       const wageBill = totalWageBill(firm);
-      const funds = spendable(world, ledger, firm.id);
-      const paid = min(wageBill, funds);
+      // Hold back money for a loan payment falling due shortly. Wages are paid
+      // before debt service in the tick, so without this a firm spends its way
+      // into arrears on a bill it could easily have met -- and since a default
+      // on any facility cross-defaults the rest, that one ordering quietly
+      // drove most of the bank's credit losses.
+      const funds = sub(spendable(world, ledger, firm.id), reservedForDebt(world, firm.id, ctx.tick));
+      const paid = min(wageBill, atLeastZero(funds));
       const coverage = wageBill > 0 ? paid / wageBill : 1;
 
       const produced = firm.employees * firm.productivity * coverage;
@@ -106,6 +112,21 @@ export const productionSystem = defineSystem({
         : 0;
   },
 });
+
+/** Days of notice a firm gives itself before a payment falls due. */
+const DEBT_SERVICE_HORIZON = 5;
+
+/** What the firm owes lenders in the next few days, and must not spend. */
+function reservedForDebt(world: WorldState, firmId: string, tick: number): Money {
+  let due = 0;
+  for (const inst of owedBy(world, firmId)) {
+    if (inst.status !== 'active' || !inst.type.startsWith('loan.')) continue;
+    if (inst.nextPaymentOn === undefined || inst.nextPaymentOn > tick + DEBT_SERVICE_HORIZON) continue;
+    const scheduled = Number(inst.data.monthlyPayment ?? 0) || inst.accrued;
+    due += Math.min(scheduled, inst.outstanding + inst.accrued);
+  }
+  return Math.round(due) as Money;
+}
 
 /** Exposed so the goods market can reuse the same affordability rule. */
 export function affordable(amount: Money, available: Money): Money {

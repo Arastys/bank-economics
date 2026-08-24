@@ -62,6 +62,21 @@ export const accountingSystem = defineSystem({
       });
     }
 
+  },
+});
+
+/**
+ * The annual close, run after the metrics for the year have been sampled.
+ *
+ * Ordering matters: closing the income statement zeroes every P&L account, so
+ * a December snapshot taken afterwards would report a year of trading as nil.
+ */
+export const yearEndSystem = defineSystem({
+  id: 'accounting.yearEnd',
+  phase: PHASE.CLOSE,
+  description: 'Tax, public spending and the annual close',
+  run(ctx) {
+    const { world, ledger } = ctx;
     if (!isYearEnd(ctx.tick)) return;
 
     const taxRate = world.config.corporationTaxRate;
