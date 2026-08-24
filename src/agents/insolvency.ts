@@ -6,9 +6,6 @@ import { getInstrument, owedBy, type WorldState } from '../world/state.js';
 import { paymentPostings, spendable } from '../world/transfer.js';
 import type { EntityId } from '../world/types.js';
 
-/** What a forced sale loses against book value. */
-const LIQUIDATION_HAIRCUT = 0.4;
-
 /**
  * Wind up a failing firm.
  *
@@ -38,7 +35,7 @@ export function liquidateAssets(
     const book = naturalBalance(ledger, companyId, code);
     if (book <= 0) continue;
 
-    const asking = scale(book, 1 - LIQUIDATION_HAIRCUT);
+    const asking = scale(book, 1 - world.config.liquidationHaircut);
     const proceeds = min(asking, budget);
     if (proceeds > 0) {
       postings.push(

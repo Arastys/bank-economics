@@ -35,8 +35,11 @@ export const monetaryPolicySystem = defineSystem({
 
     // Rates move gradually. A committee that jumped straight to the rule's
     // answer every month would drive a policy cycle of its own.
-    const smoothed = 0.85 * cb.bankRate + 0.15 * target;
-    const next = Math.max(0, Math.min(0.12, Math.round(smoothed * 10000) / 10000));
+    // Rates move gradually. A committee that jumped straight to the rule's
+    // answer every month would drive a policy cycle of its own.
+    const inertia = config.policySmoothing;
+    const smoothed = inertia * cb.bankRate + (1 - inertia) * target;
+    const next = Math.max(0, Math.min(config.maxBankRate, Math.round(smoothed * 10000) / 10000));
 
     if (Math.abs(next - cb.bankRate) >= 0.0005) {
       const from = cb.bankRate;

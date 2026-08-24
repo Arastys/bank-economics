@@ -9,12 +9,6 @@ import type { CreditApplication } from '../world/state.js';
 import type { CompanyArchetype, EntityId } from '../world/types.js';
 import { PHASE, defineSystem } from './system.js';
 
-/** Chance per latent firm per business day of wanting to borrow. */
-const COHORT_APPLICATION_RATE = 0.0006;
-/** Chance a firm banking elsewhere approaches the player instead. */
-const SHOP_AROUND_CHANCE = 0.35;
-/** Ceiling on new applications per tick, so a boom cannot flood the desk. */
-const MAX_NEW_APPLICATIONS = 8;
 
 /**
  * Where the player's deal flow comes from.
@@ -36,13 +30,13 @@ export const creditDemandSystem = defineSystem({
     let created = 0;
 
     for (const company of resolvedCompanies(world)) {
-      if (created >= MAX_NEW_APPLICATIONS) break;
+      if (created >= world.config.maxNewApplicationsPerDay) break;
       if (company.status === 'defaulted') continue;
       if (company.fundingNeed <= 0) continue;
       if (company.applicationId && world.applications[company.applicationId]?.status === 'pending') continue;
 
       const banksWithPlayer = company.bankId === world.playerBankId;
-      if (!banksWithPlayer && !bernoulli(rng, SHOP_AROUND_CHANCE)) continue;
+      if (!banksWithPlayer && !bernoulli(rng, world.config.shopAroundChance)) continue;
 
       submitApplication(ctx, {
         applicantId: company.id,
@@ -55,16 +49,16 @@ export const creditDemandSystem = defineSystem({
     }
 
     for (const cohort of cohorts(world)) {
-      if (created >= MAX_NEW_APPLICATIONS) break;
+      if (created >= world.config.maxNewApplicationsPerDay) break;
       if (cohort.memberKind !== 'company' || cohort.count <= 0) continue;
 
       // Demand is stronger when the economy is running hot.
       const cyclical = 1 + Math.max(-0.6, Math.min(1.5, world.economy.outputGap * 3));
-      const expected = cohort.count * COHORT_APPLICATION_RATE * cyclical;
+      const expected = cohort.count * world.config.cohortApplicationRate * cyclical;
       let n = Math.floor(expected);
       if (bernoulli(rng, expected - n)) n++;
 
-      for (let i = 0; i < n && created < MAX_NEW_APPLICATIONS; i++) {
+      for (let i = 0; i < n && created < world.config.maxNewApplicationsPerDay; i++) {
         const promoted = promoteMember(ctx, cohort.id, 'credit application');
         if (!promoted || promoted.entity.kind !== 'company') continue;
         const company = promoted.entity;

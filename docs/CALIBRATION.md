@@ -88,6 +88,22 @@ Those bands are guard rails, not a tuning lock — their job is to catch a chang
 that sends the model into a spiral, not to freeze the current numbers. Tighten
 them as the calibration settles.
 
+## A parameter nothing reads is worse than no parameter
+
+The sweep reports an unwired parameter as having no influence, and you conclude
+the mechanism does not matter — when in fact it was never connected. This has
+already happened here, to eight parameters at once, after an edit silently
+failed to apply.
+
+`tests/calibration.test.ts` guards both halves of it:
+
+- every parameter in `PARAMETERS` must be read as `config.<key>` somewhere in
+  `src/`;
+- no system may declare a bare tuning constant of its own, unless it is on the
+  allowlist of genuinely structural values.
+
+If you add a knob, put it in `SimConfig` and the tests will keep it honest.
+
 ## Practicalities
 
 - **Always use several seeds.** A single run tells you about that run.

@@ -131,13 +131,18 @@ async function commandSweep() {
     // metric it moves most — the second is what tells you why.
     const deltaLow = lowResult.score.total - baseline.score.total;
     const deltaHigh = highResult.score.total - baseline.score.total;
+    // Movement is measured in tolerances, not raw units. Comparing raw
+    // magnitudes just picks out whichever metric happens to be the largest
+    // number, which is never the question being asked.
     const worst = baseline.score.components
-      .map((c, i) => ({
-        label: c.label,
-        move: Math.abs(
-          (highResult.score.components[i]?.observed ?? 0) - (lowResult.score.components[i]?.observed ?? 0),
-        ),
-      }))
+      .map((c, i) => {
+        const tolerance = DEFAULT_TARGETS.find((t) => t.key === c.key)?.tolerance ?? 1;
+        const move =
+          Math.abs(
+            (highResult.score.components[i]?.observed ?? 0) - (lowResult.score.components[i]?.observed ?? 0),
+          ) / tolerance;
+        return { label: c.label, move };
+      })
       .sort((a, b) => b.move - a.move)[0];
 
     rows.push({

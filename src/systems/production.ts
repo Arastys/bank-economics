@@ -6,9 +6,6 @@ import { firmViews, householdViews, totalWageBill, type HouseholdView } from '..
 import { owedBy, type WorldState } from '../world/state.js';
 import { PHASE, defineSystem } from './system.js';
 
-/** Share of the population in the labour market. Mirrors the hiring system. */
-const PARTICIPATION = 0.96;
-
 /**
  * Firms produce and pay wages.
  *
@@ -99,7 +96,7 @@ export const productionSystem = defineSystem({
     // Measured against the people actually in the labour market, not the whole
     // population, so a fully employed economy reads as zero rather than as the
     // participation gap.
-    const workforce = world.economy.labourForce * PARTICIPATION;
+    const workforce = world.economy.labourForce * world.config.labourParticipation;
     world.economy.unemployment = workforce > 0 ? Math.max(0, 1 - employed / workforce) : 0;
 
     // Potential output drifts towards what the economy has actually been

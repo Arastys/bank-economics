@@ -3,6 +3,7 @@ import { runJob } from '../src/calibration/harness.js';
 import { DEFAULT_TARGETS, score, scoreAll } from '../src/calibration/targets.js';
 import { PARAMETERS } from '../src/calibration/parameters.js';
 import { DEFAULT_CONFIG } from '../src/world/state.js';
+import { readFileSync, readdirSync } from 'node:fs';
 
 /**
  * Guard rails, not a tuning lock.
@@ -92,7 +93,63 @@ describe('parameter definitions', () => {
       expect(parameter.max).toBeGreaterThan(parameter.min);
     }
   });
+
+  /**
+   * A parameter that nothing reads is worse than no parameter at all: the
+   * sweep dutifully reports it as having no influence, and you conclude the
+   * mechanism does not matter when in fact it was never connected. This has
+   * already happened once, to eight of them at the same time.
+   */
+  it('has every swept parameter actually read by the simulation', () => {
+    const source = readSource(new URL('../src/', import.meta.url));
+    const orphans = PARAMETERS.filter((parameter) => !source.includes(`config.${parameter.key}`));
+    expect(orphans.map((p) => p.key)).toEqual([]);
+  });
+
+  it('leaves no tuning constant stranded inside a system', () => {
+    // Anything a designer would reach for belongs in SimConfig, where the
+    // sweep can find it. Structural constants are named in the allowlist.
+    const allowed = new Set([
+      'BUSINESS_DAY_SHARE',
+      'PRICE_HISTORY',
+      'REVIEW_CYCLE',
+      'SWEEP_INTERVAL',
+      'COHORT_CHURN',
+      'DEBT_SERVICE_HORIZON',
+      'MIN_WINDOW_DAYS',
+      'TRUST_WINDOW_DAYS',
+      'BUSINESS_DAYS',
+      'FUNDING_STEP',
+      'CURVE_TENORS',
+      'INSOLVENCY_PENALTY',
+      'PARAMETERS',
+      'DEFAULT_TARGETS',
+    ]);
+    const stranded: string[] = [];
+    for (const [file, text] of sourceFiles(new URL('../src/systems/', import.meta.url))) {
+      for (const match of text.matchAll(/^const ([A-Z][A-Z0-9_]+) = [-\d]/gm)) {
+        if (!allowed.has(match[1]!)) stranded.push(`${file}: ${match[1]}`);
+      }
+    }
+    expect(stranded).toEqual([]);
+  });
 });
+
+function sourceFiles(dir: URL): [string, string][] {
+  const out: [string, string][] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const child = new URL(entry.name + (entry.isDirectory() ? '/' : ''), dir);
+    if (entry.isDirectory()) out.push(...sourceFiles(child));
+    else if (entry.name.endsWith('.ts')) out.push([entry.name, readFileSync(child, 'utf8')]);
+  }
+  return out;
+}
+
+function readSource(dir: URL): string {
+  return sourceFiles(dir)
+    .map(([, text]) => text)
+    .join('\n');
+}
 
 /** Set whichever summary field a target reads, so it lands exactly on target. */
 function projectOnto(summary: ReturnType<typeof runJob>['summary'], key: string, value: number) {

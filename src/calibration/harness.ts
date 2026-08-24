@@ -102,7 +102,10 @@ function summarise(
     insolvencyRate: failures / Math.max(1, job.years) / averageFirms,
 
     nim: averageEarning > 0 ? average(netInterest) / averageEarning : 0,
-    roe: averageEquity > 0 ? average(profits.slice(1)) / averageEquity : 0,
+    // Bounded: return on equity goes to infinity as equity approaches zero, and
+    // one nearly-insolvent seed would otherwise swamp every other signal in the
+    // score. Insolvency is already penalised on its own terms.
+    roe: clampRatio(averageEquity > 0 ? average(profits.slice(1)) / averageEquity : 0),
     costOfRisk: averageLoans > 0 ? average(impairments.slice(1)) / averageLoans : 0,
     finalEquity: equity[equity.length - 1] ?? 0,
     minEquity: equity.length ? Math.min(...equity) : 0,
@@ -119,6 +122,11 @@ function countFirms(world: WorldState): number {
     else if (entity.kind === 'cohort' && entity.memberKind === 'company') total += entity.count;
   }
   return total;
+}
+
+function clampRatio(value: number, limit = 1.5): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(-limit, Math.min(limit, value));
 }
 
 function average(values: number[]): number {

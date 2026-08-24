@@ -13,9 +13,6 @@ import type { Instrument, InstrumentContext, InstrumentType } from './types.js';
 export const LOAN_AMORTISING = 'loan.amortising';
 export const LOAN_BULLET = 'loan.bullet';
 
-/** Missed payments tolerated before the loan is written off. */
-const ARREARS_LIMIT = 3;
-
 export interface OriginateLoanArgs {
   lenderId: EntityId;
   borrowerId: EntityId;
@@ -165,7 +162,7 @@ function takePayment(ctx: InstrumentContext, inst: Instrument): void {
   if (shortfall > 0) {
     inst.data.arrears = Number(inst.data.arrears ?? 0) + 1;
     ctx.emit('loan.missedPayment', { loanId: inst.id, borrowerId: inst.obligorId, amount: shortfall });
-    if (Number(inst.data.arrears) >= ARREARS_LIMIT) {
+    if (Number(inst.data.arrears) >= ctx.world.config.arrearsLimit) {
       defaultLoan(ctx, inst);
       return;
     }

@@ -158,7 +158,7 @@ function depreciateFixedAssets(ctx: { tick: number; ledger: LedgerState; world: 
   for (const ownerId of ownerIds(ctx.ledger)) {
     const assets = naturalBalance(ctx.ledger, ownerId, AC.FIXED_ASSETS);
     if (assets <= 0) continue;
-    const charge = scale(assets, MONTHLY_DEPRECIATION);
+    const charge = scale(assets, ctx.world.config.depreciationPerMonth);
     if (charge <= 0) continue;
     post(ctx.ledger, {
       tick: ctx.tick,
@@ -168,8 +168,5 @@ function depreciateFixedAssets(ctx: { tick: number; ledger: LedgerState; world: 
     });
   }
 }
-
-/** Roughly a ten-year life. */
-const MONTHLY_DEPRECIATION = 1 / 120;
 
 export const NO_TAX: Money = ZERO;
