@@ -130,15 +130,36 @@ migrations.set(6, (world) => {
 /**
  * Firms have demography now. An old save has a latent population that could
  * neither enter nor fail, so it gets the knobs that govern both; the pools
- * pick up their remembered margin on the first month they are asked for it,
- * which reads as exact replacement until they have something to compare to.
+ * pick up their remembered level of trade on the first month they are asked
+ * for it, which reads as exact replacement until they have something to
+ * compare to.
  */
 migrations.set(7, (world) => {
   const config = world.config as unknown as Record<string, unknown>;
   config.firmExitRate = DEFAULT_CONFIG.firmExitRate;
   config.firmExitCyclicality = DEFAULT_CONFIG.firmExitCyclicality;
   config.firmEntryElasticity = DEFAULT_CONFIG.firmEntryElasticity;
-  config.firmMarginMemory = DEFAULT_CONFIG.firmMarginMemory;
+  config.firmTradeMemory = DEFAULT_CONFIG.firmTradeMemory;
+  return world;
+});
+
+/**
+ * Entry answers how much business there is per firm, not the margin against
+ * its own average. A version 8 save carries `firmMarginMemory`, which smoothed
+ * the signal that was replaced; the successor smooths trade per firm, so the
+ * knob is renamed and the remembered margin dropped. Pools pick up a
+ * remembered level of trade the first month they are asked, which reads as
+ * exact replacement until there is something to compare to.
+ */
+migrations.set(8, (world) => {
+  const config = world.config as unknown as Record<string, unknown>;
+  config.firmTradeMemory = config.firmMarginMemory ?? DEFAULT_CONFIG.firmTradeMemory;
+  delete config.firmMarginMemory;
+  for (const entity of Object.values(world.entities)) {
+    if (entity.kind === 'cohort' && entity.memberKind === 'company') {
+      delete entity.pool.marginReference;
+    }
+  }
   return world;
 });
 

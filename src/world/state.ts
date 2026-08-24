@@ -55,16 +55,17 @@ export interface SimConfig {
    */
   firmExitCyclicality: number;
   /**
-   * How strongly entry answers profit.
+   * How strongly entry answers the amount of business going.
    *
-   * Entry is the exit rate times `1 + this * (margin - what the cohort is used
-   * to)`, so at zero entry exactly replaces exit whatever the economy is
-   * doing, and the firm population is stationary. Above zero, a sector earning
-   * more than it is used to attracts firms and one earning less loses them.
+   * Entry is the exit rate times `1 + this * (trade per firm / what the cohort
+   * is used to - 1)`, so at zero entry exactly replaces exit whatever the
+   * economy does and the firm population is stationary. Above zero a growing
+   * economy gains firms and a shrinking one loses them, and the response
+   * corrects itself: the firms that enter divide the same trade more ways.
    */
   firmEntryElasticity: number;
-  /** How fast a cohort's remembered margin follows the actual one. */
-  firmMarginMemory: number;
+  /** How fast a cohort's remembered level of trade follows the actual one. */
+  firmTradeMemory: number;
   /** Sell-through firms aim for. Above it they raise prices, below they cut. */
   targetSellThrough: number;
   /** Days of stock a firm is comfortable holding. */
@@ -314,7 +315,7 @@ export interface WorldState {
   config: SimConfig;
 }
 
-export const WORLD_VERSION = 8;
+export const WORLD_VERSION = 9;
 
 export const DEFAULT_CONFIG: SimConfig = {
   applicationValidityDays: 14,
@@ -330,7 +331,7 @@ export const DEFAULT_CONFIG: SimConfig = {
   firmExitRate: 0.007,
   firmExitCyclicality: 2,
   firmEntryElasticity: 1.5,
-  firmMarginMemory: 0.02,
+  firmTradeMemory: 0.02,
   targetSellThrough: 0.95,
   targetStockDays: 8,
   demandPriceWeight: 0.7,
