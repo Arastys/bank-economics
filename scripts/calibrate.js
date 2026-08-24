@@ -25,7 +25,10 @@ const flag = (name, fallback) => {
   return index >= 0 && argv[index + 1] !== undefined ? argv[index + 1] : fallback;
 };
 
-const seedCount = Number(flag('seeds', 2));
+// Two seeds leaves a standard error of about +/-18 on the total, which is
+// larger than most of the differences worth arguing about. Six is affordable
+// and roughly halves it.
+const seedCount = Number(flag('seeds', 6));
 const years = Number(flag('years', 4));
 const workerCount = Math.max(1, Math.min(Number(flag('workers', os.cpus().length)), os.cpus().length));
 const only = flag('params', '')
@@ -100,8 +103,19 @@ function printScorecard(label, { score, summaries }) {
   }
   const survived = summaries.filter((s) => s.survived).length;
   const speed = Math.round(summaries.reduce((t, s) => t + s.ticksPerSecond, 0) / summaries.length);
+  const { standardError, min, max, runs } = score.spread;
   console.log(`  ${'—'.repeat(60)}`);
-  console.log(`  TOTAL ${score.total.toFixed(2)}   bank survived ${survived}/${summaries.length}   ${speed} ticks/sec`);
+  console.log(
+    `  TOTAL ${score.total.toFixed(1)} ± ${standardError.toFixed(1)}   ` +
+      `(${min.toFixed(0)}–${max.toFixed(0)} across ${runs} seeds)   ` +
+      `survived ${survived}/${summaries.length}   ${speed} ticks/sec`,
+  );
+  if (standardError > 5) {
+    console.log(
+      `  Anything smaller than about ${(2 * standardError).toFixed(0)} points is inside the noise here.` +
+        ` Raise --seeds to narrow it.`,
+    );
+  }
 }
 
 // --- commands --------------------------------------------------------------

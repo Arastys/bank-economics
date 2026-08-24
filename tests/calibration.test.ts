@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { runJob } from '../src/calibration/harness.js';
-import { DEFAULT_TARGETS, score, scoreAll } from '../src/calibration/targets.js';
+import { DEFAULT_TARGETS, score, scoreAll, spreadOf } from '../src/calibration/targets.js';
 import { PARAMETERS } from '../src/calibration/parameters.js';
 import { DEFAULT_CONFIG } from '../src/world/state.js';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -73,6 +73,41 @@ describe('scoring', () => {
   it('punishes an insolvent bank heavily', () => {
     const failed = { ...runs[0]!, survived: false };
     expect(score(failed).total).toBeGreaterThan(score(runs[0]!).total + 40);
+  });
+
+  /**
+   * A score with no error bar invites conclusions it cannot support. The same
+   * configuration scores anywhere from 68 to 148 depending on the seed, so a
+   * five-point difference between two configurations means nothing on its own.
+   */
+  it('reports how much the runs behind an average disagreed', () => {
+    const combined = scoreAll(runs);
+    expect(combined.spread.runs).toBe(runs.length);
+    expect(combined.spread.min).toBeLessThanOrEqual(combined.total);
+    expect(combined.spread.max).toBeGreaterThanOrEqual(combined.total);
+    expect(combined.spread.standardError).toBeLessThanOrEqual(combined.spread.sd);
+  });
+
+  it('gives a single run no spread to hide behind', () => {
+    const single = score(runs[0]!);
+    expect(single.spread.runs).toBe(1);
+    expect(single.spread.sd).toBe(0);
+    expect(single.spread.min).toBe(single.total);
+  });
+
+  it('shrinks the uncertainty in the mean as runs are added', () => {
+    // Same spread either way, so only the number of runs differs. Comparing
+    // sets with different spreads would say nothing about sample size.
+    const few = spreadOf([10, 20]);
+    const many = spreadOf([10, 20, 10, 20, 10, 20, 10, 20]);
+    expect(many.sd).toBeCloseTo(few.sd, 9);
+    expect(many.standardError).toBeLessThan(few.standardError);
+    expect(many.standardError).toBeCloseTo(few.sd / Math.sqrt(8), 9);
+  });
+
+  it('copes with no runs at all', () => {
+    expect(spreadOf([]).runs).toBe(0);
+    expect(spreadOf([]).standardError).toBe(0);
   });
 
   it('averages across seeds', () => {

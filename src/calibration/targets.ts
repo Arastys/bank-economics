@@ -120,9 +120,27 @@ export interface ScoreComponent {
   formatted: string;
 }
 
+/**
+ * How much the runs behind an average disagreed with each other.
+ *
+ * Without this a score is a number with no error bar, and two configurations
+ * that differ by less than the spread look meaningfully different when they
+ * are not. Across eight seeds of the same configuration the total ranges from
+ * 68 to 148, so this is not a small effect.
+ */
+export interface Spread {
+  runs: number;
+  sd: number;
+  /** Uncertainty in the mean itself: sd / sqrt(runs). */
+  standardError: number;
+  min: number;
+  max: number;
+}
+
 export interface Score {
   total: number;
   components: ScoreComponent[];
+  spread: Spread;
 }
 
 /** Lower is better. Zero would be every target hit exactly. */
@@ -144,7 +162,7 @@ export function score(summary: RunSummary, targets: Target[] = DEFAULT_TARGETS):
     components.reduce((sum, component) => sum + component.penalty, 0) +
     (summary.survived ? 0 : INSOLVENCY_PENALTY);
 
-  return { total, components };
+  return { total, components, spread: { runs: 1, sd: 0, standardError: 0, min: total, max: total } };
 }
 
 /** Average the score across seeds, so a config is judged on more than luck. */
@@ -161,7 +179,23 @@ export function scoreAll(summaries: RunSummary[], targets: Target[] = DEFAULT_TA
       formatted: across[0]!.formatted,
     };
   });
-  return { total: mean(scores.map((s) => s.total)), components };
+  const totals = scores.map((s) => s.total);
+  return { total: mean(totals), components, spread: spreadOf(totals) };
+}
+
+export function spreadOf(values: number[]): Spread {
+  const usable = values.filter(Number.isFinite);
+  if (usable.length === 0) return { runs: 0, sd: 0, standardError: 0, min: 0, max: 0 };
+  const average = mean(usable);
+  const variance = usable.reduce((total, value) => total + (value - average) ** 2, 0) / usable.length;
+  const sd = Math.sqrt(variance);
+  return {
+    runs: usable.length,
+    sd,
+    standardError: sd / Math.sqrt(usable.length),
+    min: Math.min(...usable),
+    max: Math.max(...usable),
+  };
 }
 
 function mean(values: number[]): number {
