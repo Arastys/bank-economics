@@ -42,6 +42,42 @@ describe('netPostings', () => {
   it('handles an empty set', () => {
     expect(netPostings([])).toEqual([]);
   });
+
+  it('nets per account, so the same code on two owners stays two lines', () => {
+    const netted = netPostings([
+      debit('a', AC.CASH, pounds(3)),
+      debit('b', AC.CASH, pounds(4)),
+      debit('a', AC.CASH, pounds(1)),
+    ]);
+    expect(netted).toHaveLength(2);
+    expect(netted.find((p) => p.ownerId === 'a')!.amount).toBe(pounds(4));
+    expect(netted.find((p) => p.ownerId === 'b')!.amount).toBe(pounds(4));
+  });
+
+  /**
+   * Netting groups by owner, so an owner's lines arrive together however the
+   * caller interleaved them. Nothing in the simulation depends on the order --
+   * `post` only sums and adds -- but the journal shows it, so it is worth
+   * pinning rather than leaving to the shape of the map.
+   */
+  it('groups an owner\'s lines together however they were interleaved', () => {
+    const netted = netPostings([
+      debit('a', AC.CASH, pounds(1)),
+      debit('b', AC.CASH, pounds(1)),
+      credit('a', AC.REVENUE, pounds(1)),
+      credit('b', AC.REVENUE, pounds(1)),
+    ]);
+    expect(netted.map((p) => p.ownerId)).toEqual(['a', 'a', 'b', 'b']);
+  });
+
+  it('leaves every line a whole number of pence', () => {
+    const netted = netPostings([
+      debit('a', AC.CASH, pounds(0.01)),
+      debit('a', AC.CASH, pounds(0.02)),
+    ]);
+    expect(netted[0]!.amount).toBe(3);
+    expect(Number.isInteger(netted[0]!.amount)).toBe(true);
+  });
 });
 
 describe('interest accrual', () => {

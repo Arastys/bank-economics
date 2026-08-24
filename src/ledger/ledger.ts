@@ -182,17 +182,36 @@ export function settle(
  * Thousands of small movements that all land on the same handful of accounts
  * do not each need their own line, and writing them separately is the single
  * most expensive thing the simulation does.
+ *
+ * Grouped owner-then-code rather than under a combined `owner/code` key. The
+ * key was built with a template string, which meant allocating and hashing a
+ * fresh string for every posting: 8.5M of them in a ten-year run, and 16% of
+ * its wall clock. Two shallow lookups cost nothing and build nothing.
+ *
+ * Lines therefore come out grouped by owner instead of in first-touch order.
+ * Nothing downstream depends on that -- `post` sums the legs to check they
+ * cancel and adds each to a balance, both order-independent -- but it is
+ * visible in the journal, which is an audit log for the UI.
  */
 export function netPostings(postings: Posting[]): Posting[] {
-  const byAccount = new Map<string, Posting>();
+  const byOwner = new Map<string, Map<AccountCode, number>>();
   for (const posting of postings) {
     if (posting.amount === 0) continue;
-    const key = `${posting.ownerId}/${posting.code}`;
-    const existing = byAccount.get(key);
-    if (existing) existing.amount = add(existing.amount, posting.amount);
-    else byAccount.set(key, { ...posting });
+    let byCode = byOwner.get(posting.ownerId);
+    if (!byCode) {
+      byCode = new Map();
+      byOwner.set(posting.ownerId, byCode);
+    }
+    byCode.set(posting.code, (byCode.get(posting.code) ?? 0) + posting.amount);
   }
-  return [...byAccount.values()].filter((posting) => posting.amount !== 0);
+
+  const out: Posting[] = [];
+  for (const [ownerId, byCode] of byOwner) {
+    for (const [code, amount] of byCode) {
+      if (amount !== 0) out.push({ ownerId, code, amount: amount as Money });
+    }
+  }
+  return out;
 }
 
 /** Sum of every balance in the ledger. Must always be exactly zero. */
