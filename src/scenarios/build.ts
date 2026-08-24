@@ -1,6 +1,6 @@
-import { ZERO, add, format, pounds, round, scale, sub, type Money } from '../core/money.js';
+import { ZERO, add, allocate, format, pounds, round, scale, sub, type Money } from '../core/money.js';
 import { nextId, type IdCounters } from '../core/ids.js';
-import { identityRng, logNormal, makeRng, randInt } from '../core/rng.js';
+import { hashString, identityRng, logNormal, makeRng, randInt } from '../core/rng.js';
 import { addYears, fromDate, addMonths } from '../core/time.js';
 import { AC, depositCode } from '../ledger/accounts.js';
 import { createLedger, openWithCapital, post, credit, debit } from '../ledger/ledger.js';
@@ -21,6 +21,25 @@ const BUSINESS_DAY_SHARE = 5 / 7;
 
 const PLAYER_BANK_ID = 'bank:player';
 const OTHER_BANKS_ID = 'bank:market';
+
+/**
+ * The banks the player is up against.
+ *
+ * The first keeps the old id, so a saved game and the bond-market counterparty
+ * (`world.otherBanksId`) both still point somewhere real. The rest of the
+ * market's balance sheet is divided between them rather than added to, so the
+ * economy holds the same deposits and the same gilts either way -- what
+ * changes is that there is now more than one bank in it to compete with.
+ */
+function aiBankIds(count: number): string[] {
+  const n = Math.max(1, Math.round(count));
+  return Array.from({ length: n }, (_, i) => (i === 0 ? OTHER_BANKS_ID : `${OTHER_BANKS_ID}:${i}`));
+}
+
+/** Which rival a pool banks with. Stable in the id, so it never moves. */
+function bankForCohort(id: string, banks: string[]): string {
+  return banks[hashString(id) % banks.length]!;
+}
 const CENTRAL_BANK_ID = 'cb:boe';
 const GOVERNMENT_ID = 'gov:hmt';
 
@@ -160,15 +179,18 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
     operatingCostPerMonth: spec.playerBank.operatingCostPerMonth,
   });
 
-  addEntity(world, {
-    id: OTHER_BANKS_ID,
-    kind: 'bank',
-    detail: 'resolved',
-    name: spec.otherBanks.name,
-    createdOn: startTick,
-    isPlayer: false,
-    policy: structuredClone(spec.playerBank.policy),
-    operatingCostPerMonth: ZERO,
+  const rivals = aiBankIds(spec.otherBanks.count);
+  rivals.forEach((id, i) => {
+    addEntity(world, {
+      id,
+      kind: 'bank',
+      detail: 'resolved',
+      name: rivals.length === 1 ? spec.otherBanks.name : `${spec.otherBanks.name} ${i + 1}`,
+      createdOn: startTick,
+      isPlayer: false,
+      policy: structuredClone(spec.playerBank.policy),
+      operatingCostPerMonth: ZERO,
+    });
   });
 
   // --- the latent economy --------------------------------------------------
@@ -186,7 +208,7 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
       memberKind: 'company',
       count: cohortSpec.count,
       nextMemberIndex: 0,
-      bankId: OTHER_BANKS_ID,
+      bankId: bankForCohort(id, rivals),
       archetype: {
         sector: cohortSpec.sector,
         region: cohortSpec.region,
@@ -229,7 +251,7 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
       memberKind: 'person',
       count: cohortSpec.count + childrenOf(cohortSpec.count) + retiredOf(cohortSpec.count),
       nextMemberIndex: 0,
-      bankId: cohortSpec.banksWithPlayer ? PLAYER_BANK_ID : OTHER_BANKS_ID,
+      bankId: cohortSpec.banksWithPlayer ? PLAYER_BANK_ID : bankForCohort(id, rivals),
       archetype: {
         region: cohortSpec.region,
         creditGrade: cohortSpec.creditGrade,
@@ -330,8 +352,15 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
   // --- opening balance sheets ---------------------------------------------
 
   let playerDeposits: Money = ZERO;
-  let otherDeposits: Money = ZERO;
-  let otherLoans: Money = ZERO;
+  // Per rival rather than one figure for the lot: each has its own book, and
+  // a payment between two of their customers now settles in reserves between
+  // them, which is what having more than one bank means.
+  const otherDeposits = new Map<string, Money>(rivals.map((id) => [id, ZERO]));
+  const otherLoans = new Map<string, Money>(rivals.map((id) => [id, ZERO]));
+  const addTo = (m: Map<string, Money>, id: string, amount: Money) =>
+    m.set(id, add(m.get(id) ?? ZERO, amount));
+  const sumOf = (m: Map<string, Money>): Money => [...m.values()].reduce((t, v) => add(t, v), ZERO);
+  let legacyDebt: Money = ZERO;
 
   companyCohorts.forEach((cohort) => {
     const cohortSpec = specByCohortId.get(cohort.id)!;
@@ -343,14 +372,14 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
       cohort.id,
       startTick,
       {
-        [depositCode(OTHER_BANKS_ID)]: cash,
+        [depositCode(cohort.bankId!)]: cash,
         [AC.FIXED_ASSETS]: scale(cohortSpec.fixedAssetsPerFirm, cohort.count),
         [AC.INVENTORY]: scale(cohortSpec.inventoryValuePerFirm, cohort.count),
       },
       { [AC.BORROWINGS]: debt },
     );
-    otherDeposits = add(otherDeposits, cash);
-    otherLoans = add(otherLoans, debt);
+    addTo(otherDeposits, cohort.bankId!, cash);
+    legacyDebt = add(legacyDebt, debt);
   });
 
   spec.personCohorts.forEach((cohortSpec, index) => {
@@ -372,12 +401,22 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
       { [AC.BORROWINGS]: debt },
     );
     if (bankId === PLAYER_BANK_ID) playerDeposits = add(playerDeposits, savings);
-    else otherDeposits = add(otherDeposits, savings);
+    else addTo(otherDeposits, bankId, savings);
     // Person borrowing predates the game and sits with the rest of the
     // market, so the player's book starts purely corporate. Retail lending is
     // a deliberate extension point rather than a starting position.
-    otherLoans = add(otherLoans, debt);
+    legacyDebt = add(legacyDebt, debt);
   });
+
+  // Borrowing that predates the game has no contract behind it -- it is an
+  // opening figure on both sides, not a set of instruments -- so which rival
+  // carries which pool's debt is arbitrary. Split it in proportion to
+  // deposits, which keeps every rival's loan-to-deposit ratio identical. Any
+  // other split hands one of them a loan book with no funding behind it, and
+  // `plugReserves` rightly refuses the scenario.
+  allocate(legacyDebt, rivals.map((id) => otherDeposits.get(id) ?? ZERO)).forEach((share, i) =>
+    addTo(otherLoans, rivals[i]!, share),
+  );
 
   let playerCorporateLoans: Money = ZERO;
   for (const customer of customers) {
@@ -401,7 +440,9 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
 
   const playerLoans = playerCorporateLoans;
   const playerGilts = scale(playerDeposits, spec.playerBank.giltsToDeposits);
-  const otherGilts = scale(otherDeposits, spec.otherBanks.giltsToDeposits);
+  const otherGilts = new Map<string, Money>(
+    rivals.map((id) => [id, scale(otherDeposits.get(id) ?? ZERO, spec.otherBanks.giltsToDeposits)]),
+  );
 
   // Reserves are the balancing figure: whatever equity and deposits fund that
   // has not been lent out or invested in gilts is held as central bank money.
@@ -412,8 +453,16 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
     playerGilts,
     playerLoans,
   );
-  const otherEquity = scale(otherDeposits, spec.otherBanks.equityToDeposits);
-  const otherReserves = plugReserves(spec.otherBanks.name, otherDeposits, otherEquity, otherGilts, otherLoans);
+  const otherReserves = new Map<string, Money>(
+    rivals.map((id) => {
+      const deposits = otherDeposits.get(id) ?? ZERO;
+      const equity = scale(deposits, spec.otherBanks.equityToDeposits);
+      return [
+        id,
+        plugReserves(id, deposits, equity, otherGilts.get(id) ?? ZERO, otherLoans.get(id) ?? ZERO),
+      ];
+    }),
+  );
 
   openWithCapital(
     ledger,
@@ -423,13 +472,19 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
     { [AC.CUSTOMER_DEPOSITS]: playerDeposits },
   );
 
-  openWithCapital(
-    ledger,
-    OTHER_BANKS_ID,
-    startTick,
-    { [AC.RESERVES]: otherReserves, [AC.BONDS]: otherGilts, [AC.LOANS]: otherLoans },
-    { [AC.CUSTOMER_DEPOSITS]: otherDeposits },
-  );
+  for (const id of rivals) {
+    openWithCapital(
+      ledger,
+      id,
+      startTick,
+      {
+        [AC.RESERVES]: otherReserves.get(id) ?? ZERO,
+        [AC.BONDS]: otherGilts.get(id) ?? ZERO,
+        [AC.LOANS]: otherLoans.get(id) ?? ZERO,
+      },
+      { [AC.CUSTOMER_DEPOSITS]: otherDeposits.get(id) ?? ZERO },
+    );
+  }
 
   // --- the monetary base ---------------------------------------------------
   //
@@ -437,8 +492,8 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
   // its claim on the state; every gilt in issue is a liability of the state.
   // The state has spent the proceeds, so it carries the lot as negative
   // reserves -- which is exactly what a national debt is.
-  const reservesIssued = add(playerReserves, otherReserves);
-  const giltsInIssue = add(playerGilts, otherGilts);
+  const reservesIssued = add(playerReserves, sumOf(otherReserves));
+  const giltsInIssue = add(playerGilts, sumOf(otherGilts));
 
   post(ledger, {
     tick: startTick,
@@ -455,7 +510,7 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
   // --- contracts behind the opening balances -------------------------------
 
   seedGilts(world, spec, PLAYER_BANK_ID, playerGilts);
-  seedGilts(world, spec, OTHER_BANKS_ID, otherGilts);
+  for (const id of rivals) seedGilts(world, spec, id, otherGilts.get(id) ?? ZERO);
 
   for (const customer of customers) {
     const monthlyRate = customer.rate / 12;

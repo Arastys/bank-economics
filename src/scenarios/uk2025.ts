@@ -74,7 +74,8 @@ export const uk2025: ScenarioSpec = {
   },
 
   otherBanks: {
-    name: 'The rest of the market',
+    name: 'Rival bank',
+    count: 4,
     giltsToDeposits: 0.12,
     equityToDeposits: 0.20,
   },

@@ -71,6 +71,11 @@ export interface ScenarioSpec {
 
   otherBanks: {
     name: string;
+    /**
+     * How many rival banks the rest of the market is divided into. One is the
+     * old behaviour: a single aggregate holding everyone else's deposits.
+     */
+    count: number;
     giltsToDeposits: number;
     equityToDeposits: number;
   };
