@@ -69,6 +69,41 @@ These are the ones the boundaries were built for.
 - **A different front end.** The engine has no DOM dependency; the dashboard is
   the only thing that would be replaced.
 
+## The economy does not survive a decade
+
+Everything here has been calibrated on three-year runs, and the model falls
+apart after about four. Run the default configuration out and unemployment
+reaches 19% by year six and 38% by year ten; the bank's loan book drains to
+nothing by year seven and its capital goes negative shortly after.
+
+The cause is that **firms have no margin objective**. They set prices from how
+fast stock is turning over and nothing else, so there is nothing tying a price
+to what the thing cost to make. Pay is indexed to inflation and to how tight
+the labour market is, and can therefore rise straight through the price:
+
+| date | avg price | unit wage cost | gross margin |
+| --- | ---: | ---: | ---: |
+| 2025-07 | £76.46 | £74.92 | 2.0% |
+| 2026-07 | £83.67 | £76.19 | 8.9% |
+| 2027-07 | £79.32 | £79.97 | −0.8% |
+| 2028-01 | £82.55 | £86.16 | −4.4% |
+
+Once the firm sector is selling below cost its earnings are negative by
+construction, every credit application fails the affordability test — 15,776
+declines for "no earnings to service the debt" over eight years — and the
+credit market closes. Without credit, firms cannot fund payroll, they shed
+staff, demand falls and prices fall further.
+
+Note this is the *second* spiral in the same place. Wage indexation was added
+to stop a deflationary wage-price spiral, and downward wage rigidity was added
+to stop that fix spiralling the other way. Both were right; together they
+leave nothing defending the margin.
+
+The fix is a pricing rule that knows what production costs — a target markup
+that firms move towards, with the sell-through signal deciding how fast rather
+than deciding the price outright. `grossMargin` is now recorded monthly so any
+attempt can be measured.
+
 ## Known open problem
 
 Splitting a cohort into several identical cohorts changes aggregate outcomes.

@@ -160,6 +160,22 @@ permanent cost differences mean permanent competitive losers, and with no firm
 entry or exit they simply shrink and shed staff. At 0.09 unemployment reaches
 9.9% and output falls 3.7% a year. That one waits on firm demography.
 
+## Three years is not long enough
+
+Every guard rail and every calibration in this repository runs for three years,
+and the model is fine for three years. It is not fine for ten:
+
+| horizon | gross margin | unemployment | insolvency |
+| --- | ---: | ---: | ---: |
+| 3 years | 2.9% | 4.0% | 4.0% |
+| 6 years | 0.2% | 19.5% | 4.5% |
+| 10 years | 1.4% | 37.6% | 5.3% |
+
+A short horizon is not a cheap approximation of a long one. It is a different
+question, and it was answering the easy one. The campaign presets run to twenty
+and forty years for this reason, and `grossMargin` is recorded monthly because
+it is the variable that turns over first.
+
 ## Watch the denominator
 
 A metric can flatter the model without anyone lying. Corporate insolvency was

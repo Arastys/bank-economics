@@ -79,6 +79,7 @@ const METRICS: [string, (s: RunSummary) => number][] = [
   ['unemployment', (s) => s.unemployment.mean],
   ['output growth', (s) => s.outputGrowth],
   ['insolvency', (s) => s.insolvencyRate],
+  ['gross margin', (s) => s.grossMargin.mean],
   ['cost of risk', (s) => s.costOfRisk],
   ['net interest margin', (s) => s.nim],
   ['return on equity', (s) => s.roe],
@@ -123,8 +124,8 @@ function renderGroups(groups: Map<string, CampaignRun[]>, studyId: string): stri
   const width = Math.max(14, ...labels.map((l) => l.length + 2));
 
   lines.push(
-    `  ${padEnd('configuration', width)} ${pad('score', 14)} ${METRICS.slice(0, 5)
-      .map(([name]) => pad(name, 18))
+    `  ${padEnd('configuration', width)} ${pad('score', 14)} ${METRICS.slice(0, 6)
+      .map(([name]) => pad(name, 16))
       .join(' ')}`,
   );
   for (const label of labels) {
@@ -133,8 +134,8 @@ function renderGroups(groups: Map<string, CampaignRun[]>, studyId: string): stri
     const mean = runs.reduce((t, r) => t + r.score!, 0) / runs.length;
     lines.push(
       `  ${padEnd(label, width)} ${pad(`${mean.toFixed(1)}±${scores.standardError.toFixed(1)}`, 14)} ` +
-        METRICS.slice(0, 5)
-          .map(([, read]) => pad(metric(runs, read), 18))
+        METRICS.slice(0, 6)
+          .map(([, read]) => pad(metric(runs, read), 16))
           .join(' '),
     );
   }

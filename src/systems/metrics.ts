@@ -4,6 +4,7 @@ import { naturalBalance } from '../ledger/ledger.js';
 import { incomeStatement } from '../ledger/statements.js';
 import { record } from '../metrics/recorder.js';
 import { regulatoryMetrics } from '../metrics/regulatory.js';
+import { firmViews } from '../agents/views.js';
 import { centralBank, heldBy, playerBank, resolvedCompanies } from '../world/state.js';
 import { PHASE, defineSystem } from './system.js';
 
@@ -12,6 +13,30 @@ import { PHASE, defineSystem } from './system.js';
  * charts read from here, and so does anyone balancing the game from a headless
  * batch run.
  */
+/**
+ * What firms make on a unit before overheads: price less the wages that went
+ * into producing it, across the whole economy and weighted by headcount.
+ *
+ * Worth watching because nothing in the model defends it. Firms price off how
+ * fast stock is turning over, not off what it cost them, so pay can rise
+ * straight through the price and leave the entire firm sector selling below
+ * cost -- at which point nobody can service a loan and the credit market
+ * closes. That is invisible in a three-year run and fatal in a ten-year one.
+ */
+function grossMargin(world: Parameters<typeof resolvedCompanies>[0]): number {
+  let employees = 0;
+  let weightedPrice = 0;
+  let weightedCost = 0;
+  for (const firm of firmViews(world)) {
+    if (firm.employees <= 0 || firm.price <= 0 || firm.productivity <= 0) continue;
+    employees += firm.employees;
+    weightedPrice += firm.price * firm.employees;
+    weightedCost += (firm.wagePerEmployee / firm.productivity) * firm.employees;
+  }
+  if (employees === 0 || weightedPrice === 0) return 0;
+  return (weightedPrice - weightedCost) / weightedPrice;
+}
+
 export const metricsSystem = defineSystem({
   id: 'metrics.record',
   phase: PHASE.METRICS,
@@ -63,6 +88,7 @@ export const metricsSystem = defineSystem({
       priceLevel: world.economy.priceIndex,
       output: world.economy.outputUnits,
       resolvedFirms: resolvedCompanies(world).length,
+      grossMargin: grossMargin(world),
     });
 
     if (reg.capitalRatio < world.config.minimumCapitalRatio) {

@@ -28,6 +28,11 @@ export interface RunSummary {
   priceDrift: number;
   /** Share of firms failing per year. */
   insolvencyRate: number;
+  /**
+   * Price less unit wage cost, across the economy. Nothing in the model
+   * defends this, and once it goes negative no borrower can service anything.
+   */
+  grossMargin: Spread;
 
   /** Net interest margin: net interest income over average earning assets. */
   nim: number;

@@ -112,6 +112,7 @@ function summarise(
     outputGrowth: annualisedGrowth(seriesOf(metrics, 'output'), job.years),
     priceDrift: annualisedGrowth(seriesOf(metrics, 'priceLevel'), job.years),
     insolvencyRate: failures / Math.max(1, job.years) / atRiskFirms,
+    grossMargin: spread(settled(seriesOf(metrics, 'grossMargin'), 3)),
 
     nim: averageEarning > 0 ? average(netInterest) / averageEarning : 0,
     // Bounded: return on equity goes to infinity as equity approaches zero, and
