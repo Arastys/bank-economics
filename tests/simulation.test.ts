@@ -104,6 +104,40 @@ describe('determinism', () => {
     );
   });
 
+  /**
+   * The journal is a log of what happened, not part of what is. Nothing reads
+   * it back, so carrying it in every save was 40% of the file for no benefit.
+   */
+  it('leaves the audit log out of the save file', () => {
+    const engine = newGame('uk2025', { checkInvariantsEvery: 30 });
+    engine.run(200);
+    expect(engine.world.ledger.journal.length).toBeGreaterThan(0);
+
+    const blob = save(engine.world);
+    const parsed = JSON.parse(blob) as { world: { ledger: { journal: unknown[] } } };
+    expect(parsed.world.ledger.journal).toEqual([]);
+    expect(blob.length).toBeLessThan(JSON.stringify(engine.world).length);
+  });
+
+  it('restores a usable ledger even though the log was dropped', () => {
+    const engine = newGame('uk2025', { checkInvariantsEvery: 30 });
+    engine.run(120);
+
+    const resumed = new Engine(load(save(engine.world)), { checkInvariantsEvery: 1 });
+    expect(resumed.world.ledger.journal).toEqual([]);
+
+    resumed.run(30);
+    expect(resumed.world.ledger.journal.length).toBeGreaterThan(0);
+    expect(trialBalance(resumed.world.ledger)).toBe(0);
+  });
+
+  it('keeps the audit log bounded over a long game', () => {
+    const engine = newGame('uk2025', { checkInvariantsEvery: 30 });
+    engine.run(600);
+    const { journal, journalCap } = engine.world.ledger;
+    expect(journal.length).toBeLessThan(journalCap * 2);
+  });
+
   it('rejects a save from an unknown version', () => {
     expect(() => load(JSON.stringify({ version: 99, world: {} }))).toThrow(/newer version/);
     expect(() => load('{}')).toThrow(/not a valid save file/i);

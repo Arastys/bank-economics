@@ -7,16 +7,21 @@ export interface Snapshot {
 }
 
 /**
- * Save games are just the world state.
+ * Save games are the world state, minus the audit log.
  *
  * Nothing in the world holds a function, a Map or a class instance, which is
- * what makes this a one-liner -- and is a rule worth keeping as the game grows.
+ * what keeps this close to a one-liner -- and is a rule worth keeping as the
+ * game grows. The single exception is the ledger journal, which is a log of
+ * what happened rather than part of what is, and is restored empty.
  */
 export function save(world: WorldState): string {
   const snapshot: Snapshot = {
     version: WORLD_VERSION,
     savedAt: new Date().toISOString(),
-    world,
+    // The ledger journal is an audit log rather than state -- nothing reads it
+    // back and no outcome depends on it -- but it was 40% of the file. It is
+    // dropped here and restored empty on load.
+    world: { ...world, ledger: { ...world.ledger, journal: [] } },
   };
   return JSON.stringify(snapshot);
 }
@@ -32,6 +37,7 @@ export function load(json: string): WorldState {
     throw new Error('Not a valid save file');
   }
   let world = snapshot.world;
+  if (world.ledger && !Array.isArray(world.ledger.journal)) world.ledger.journal = [];
   let version = snapshot.version;
   while (version < WORLD_VERSION) {
     const migration = migrations.get(version);

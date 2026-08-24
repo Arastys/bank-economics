@@ -24,7 +24,13 @@ export interface LedgerState {
    *  entity's books is the single hottest thing a tick can do, so the index
    *  is maintained rather than derived. */
   accountsByOwner: Record<string, string[]>;
-  /** Most recent transactions, capped so long games do not grow without bound. */
+  /**
+   * Most recent transactions, capped so long games do not grow without bound.
+   *
+   * This is an audit log, not simulation state: nothing reads it back, and
+   * dropping it changes no outcome. It is therefore left out of save files,
+   * where it was 40% of the bytes.
+   */
   journal: Transaction[];
   journalCap: number;
   nextTxId: number;
@@ -112,7 +118,10 @@ export function post(ledger: LedgerState, tx: Omit<Transaction, 'id'>): Transact
 
   const recorded: Transaction = { ...tx, id: ledger.nextTxId++ };
   ledger.journal.push(recorded);
-  if (ledger.journal.length > ledger.journalCap) {
+  // Trim in batches rather than on every write. Shifting the array down by one
+  // each time a transaction arrives is O(n) per posting for no benefit; letting
+  // it grow to twice the cap and then cutting back is amortised O(1).
+  if (ledger.journal.length >= ledger.journalCap * 2) {
     ledger.journal.splice(0, ledger.journal.length - ledger.journalCap);
   }
   return recorded;
