@@ -1,6 +1,6 @@
 import { atLeastZero, type Money } from '../core/money.js';
 import { AC, depositCode, type AccountCode } from '../ledger/accounts.js';
-import { balance, credit, debit, post, type LedgerState, type Posting } from '../ledger/ledger.js';
+import { balance, credit, debit, netPostings, post, type LedgerState, type Posting } from '../ledger/ledger.js';
 import type { WorldState } from './state.js';
 import type { EntityId } from './types.js';
 import { bankOf, walletOf } from './wallet.js';
@@ -115,20 +115,7 @@ export class FlowBatch {
   /** Post everything accumulated so far. Returns the number of flows written. */
   commit(tick: number, kind: string, description: string): number {
     if (this.postings.length === 0) return 0;
-    // Net the postings by account so one transaction carries one line per account.
-    const netted = new Map<string, Posting>();
-    for (const p of this.postings) {
-      const key = `${p.ownerId}/${p.code}`;
-      const existing = netted.get(key);
-      if (existing) existing.amount = (existing.amount + p.amount) as Money;
-      else netted.set(key, { ...p });
-    }
-    post(this.ledger, {
-      tick,
-      kind,
-      description,
-      postings: [...netted.values()].filter((p) => p.amount !== 0),
-    });
+    post(this.ledger, { tick, kind, description, postings: netPostings(this.postings) });
     const written = this.count;
     this.postings = [];
     this.count = 0;

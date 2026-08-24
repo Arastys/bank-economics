@@ -2,7 +2,7 @@ import { ZERO, add, round, scale, sub, type Money } from '../core/money.js';
 import { nextId } from '../core/ids.js';
 import { addMonths, addYears, dailyRate, yearFraction, type Day } from '../core/time.js';
 import { AC } from '../ledger/accounts.js';
-import { credit, debit, post } from '../ledger/ledger.js';
+import { credit, debit, post, type Posting } from '../ledger/ledger.js';
 import { addInstrument, transferHolder, touch, type WorldState } from '../world/state.js';
 import { payBetween } from '../world/transfer.js';
 import { walletOf } from '../world/wallet.js';
@@ -71,22 +71,16 @@ export function issueBond(ctx: InstrumentContext, args: IssueBondArgs): Instrume
   return inst;
 }
 
-function accrueCoupon(ctx: InstrumentContext, inst: Instrument): void {
+function accrueCoupon(_ctx: InstrumentContext, inst: Instrument): Posting[] {
   const interest = scale(inst.outstanding, dailyRate(inst.rate));
-  if (interest === 0) return;
+  if (interest === 0) return [];
   inst.accrued = add(inst.accrued, interest);
-  post(ctx.ledger, {
-    tick: ctx.tick,
-    kind: 'bond.accrue',
-    description: `Coupon accrued on ${inst.id}`,
-    refs: { bondId: inst.id },
-    postings: [
-      debit(inst.holderId, AC.INTEREST_RECEIVABLE, interest),
-      credit(inst.holderId, AC.INTEREST_INCOME, interest),
-      debit(inst.obligorId, AC.INTEREST_EXPENSE, interest),
-      credit(inst.obligorId, AC.INTEREST_PAYABLE, interest),
-    ],
-  });
+  return [
+    debit(inst.holderId, AC.INTEREST_RECEIVABLE, interest),
+    credit(inst.holderId, AC.INTEREST_INCOME, interest),
+    debit(inst.obligorId, AC.INTEREST_EXPENSE, interest),
+    credit(inst.obligorId, AC.INTEREST_PAYABLE, interest),
+  ];
 }
 
 function payCoupon(ctx: InstrumentContext, inst: Instrument): void {

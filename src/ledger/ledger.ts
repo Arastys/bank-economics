@@ -167,6 +167,25 @@ export function settle(
   });
 }
 
+/**
+ * Collapse many postings into one line per account.
+ *
+ * Thousands of small movements that all land on the same handful of accounts
+ * do not each need their own line, and writing them separately is the single
+ * most expensive thing the simulation does.
+ */
+export function netPostings(postings: Posting[]): Posting[] {
+  const byAccount = new Map<string, Posting>();
+  for (const posting of postings) {
+    if (posting.amount === 0) continue;
+    const key = `${posting.ownerId}/${posting.code}`;
+    const existing = byAccount.get(key);
+    if (existing) existing.amount = add(existing.amount, posting.amount);
+    else byAccount.set(key, { ...posting });
+  }
+  return [...byAccount.values()].filter((posting) => posting.amount !== 0);
+}
+
 /** Sum of every balance in the ledger. Must always be exactly zero. */
 export function trialBalance(ledger: LedgerState): Money {
   let total = 0;

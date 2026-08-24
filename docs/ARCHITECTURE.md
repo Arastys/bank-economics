@@ -101,6 +101,21 @@ in the middle. Each bank has to satisfy
 which keeps every set of books balanced whether the bank is merely clearing its
 customers' payments or is a party to the trade.
 
+### Batching
+
+Interest on thousands of contracts lands on a handful of accounts, so the
+lifecycle system accrues the whole economy first and writes one netted
+transaction. Doing it per contract was 68% of the entire tick and left the
+journal holding barely a day of history.
+
+`netPostings` is the shared primitive: collapse many movements into one line
+per account, dropping anything that cancels out. `FlowBatch` and `clearMarket`
+use it too. The rule of thumb is that anything touching every agent should
+accumulate postings and write once.
+
+Batching is only safe because each contract still rounds and records its own
+interest — only the ledger write is shared — so totals are unchanged.
+
 ## Bank lending creates money
 
 Loan origination is the clearest illustration of why the ledger is worth

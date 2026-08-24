@@ -1,4 +1,5 @@
 import type { Money } from '../core/money.js';
+import type { Posting } from '../ledger/ledger.js';
 import type { Day } from '../core/time.js';
 import type { CreditGrade, EntityId } from '../world/types.js';
 
@@ -44,8 +45,12 @@ export interface InstrumentType {
 
   /** Called once when the contract is created, after the opening postings. */
   onOpen?(ctx: InstrumentContext, inst: Instrument): void;
-  /** Daily. Normally books interest into `accrued` and the ledger. */
-  accrue?(ctx: InstrumentContext, inst: Instrument): void;
+  /**
+   * Daily interest. Updates the contract's own `accrued` figure, but *returns*
+   * its ledger postings rather than writing them, so the lifecycle system can
+   * net every instrument in the economy into a single transaction.
+   */
+  accrue?(ctx: InstrumentContext, inst: Instrument): Posting[] | void;
   /** On `nextPaymentOn`. Moves cash and amortises principal. */
   onPayment?(ctx: InstrumentContext, inst: Instrument): void;
   /** On `maturesOn`. */

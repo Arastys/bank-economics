@@ -2,7 +2,7 @@ import { ZERO, add, atLeastZero, min, scale, sub, type Money } from '../core/mon
 import { nextId } from '../core/ids.js';
 import { addMonths, dailyRate, type Day } from '../core/time.js';
 import { AC, depositCode } from '../ledger/accounts.js';
-import { credit, debit, post, type LedgerState } from '../ledger/ledger.js';
+import { credit, debit, post, type LedgerState, type Posting } from '../ledger/ledger.js';
 import { addInstrument, owedBy, touch, type WorldState } from '../world/state.js';
 import { paymentPostings, spendable } from '../world/transfer.js';
 import { activeLoansOf, isInsolvent, isStillActive, liquidateAssets, raiseCash } from '../agents/insolvency.js';
@@ -90,22 +90,17 @@ export function levelPayment(principal: Money, monthlyRate: number, months: numb
   return scale(principal, factor);
 }
 
-function accrueInterest(ctx: InstrumentContext, inst: Instrument): void {
+function accrueInterest(_ctx: InstrumentContext, inst: Instrument): Posting[] {
   const interest = scale(inst.outstanding, dailyRate(inst.rate));
-  if (interest === 0) return;
+  if (interest === 0) return [];
+  // Rounded per contract, so the borrower's own accrued figure stays exact.
   inst.accrued = add(inst.accrued, interest);
-  post(ctx.ledger, {
-    tick: ctx.tick,
-    kind: 'loan.accrue',
-    description: `Interest accrued on ${inst.id}`,
-    refs: { loanId: inst.id },
-    postings: [
-      debit(inst.holderId, AC.INTEREST_RECEIVABLE, interest),
-      credit(inst.holderId, AC.INTEREST_INCOME, interest),
-      debit(inst.obligorId, AC.INTEREST_EXPENSE, interest),
-      credit(inst.obligorId, AC.INTEREST_PAYABLE, interest),
-    ],
-  });
+  return [
+    debit(inst.holderId, AC.INTEREST_RECEIVABLE, interest),
+    credit(inst.holderId, AC.INTEREST_INCOME, interest),
+    debit(inst.obligorId, AC.INTEREST_EXPENSE, interest),
+    credit(inst.obligorId, AC.INTEREST_PAYABLE, interest),
+  ];
 }
 
 /**

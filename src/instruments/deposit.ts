@@ -2,7 +2,7 @@ import { ZERO, add, atLeastZero, min, scale, sub, type Money } from '../core/mon
 import { nextId } from '../core/ids.js';
 import { addMonths, dailyRate } from '../core/time.js';
 import { AC, depositCode, termDepositCode } from '../ledger/accounts.js';
-import { balance, credit, debit, post } from '../ledger/ledger.js';
+import { balance, credit, debit, post, type Posting } from '../ledger/ledger.js';
 import { addInstrument, touch } from '../world/state.js';
 import type { EntityId } from '../world/types.js';
 import { instrumentTypes } from './registry.js';
@@ -95,7 +95,7 @@ export function openTermDeposit(ctx: InstrumentContext, args: OpenDepositArgs & 
   return inst;
 }
 
-function accrueDepositInterest(ctx: InstrumentContext, inst: Instrument): void {
+function accrueDepositInterest(ctx: InstrumentContext, inst: Instrument): Posting[] {
   const bankId = inst.obligorId;
   const customerId = inst.holderId;
   const code = inst.type === DEPOSIT_TERM ? termDepositCode(bankId) : depositCode(bankId);
@@ -104,21 +104,15 @@ function accrueDepositInterest(ctx: InstrumentContext, inst: Instrument): void {
   inst.outstanding = atLeastZero(balance(ctx.ledger, customerId, code));
 
   const interest = scale(inst.outstanding, dailyRate(inst.rate));
-  if (interest === 0) return;
+  if (interest === 0) return [];
   inst.accrued = add(inst.accrued, interest);
 
-  post(ctx.ledger, {
-    tick: ctx.tick,
-    kind: 'deposit.accrue',
-    description: `Deposit interest accrued on ${inst.id}`,
-    refs: { depositId: inst.id },
-    postings: [
-      debit(bankId, AC.INTEREST_EXPENSE, interest),
-      credit(bankId, AC.INTEREST_PAYABLE, interest),
-      debit(customerId, AC.INTEREST_RECEIVABLE, interest),
-      credit(customerId, AC.INTEREST_INCOME, interest),
-    ],
-  });
+  return [
+    debit(bankId, AC.INTEREST_EXPENSE, interest),
+    credit(bankId, AC.INTEREST_PAYABLE, interest),
+    debit(customerId, AC.INTEREST_RECEIVABLE, interest),
+    credit(customerId, AC.INTEREST_INCOME, interest),
+  ];
 }
 
 /** Capitalise accrued interest into the customer's balance. */
