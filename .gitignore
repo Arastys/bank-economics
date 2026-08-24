@@ -3,3 +3,11 @@ dist/
 *.log
 .DS_Store
 .vitest/
+
+# Campaign results. These are data, not source: a deep run is ~1 MB of
+# gzipped JSON and an overnight one several times that, they are produced
+# fresh from a commit whenever anyone wants them, and the file records the
+# commit it came from so it never needs to live beside the code.
+campaign*.json
+campaign*.json.gz
+*.campaign.json.gz
