@@ -380,7 +380,7 @@ export const DEFAULT_CONFIG: SimConfig = {
   wageTightnessResponse: 0.3,
   maxMonthlyWageCut: 0.002,
   maxMonthlyWageRise: 0.02,
-  depreciationPerMonth: 1 / 120,
+  depreciationPerMonth: 1 / 180,
   policySmoothing: 0.85,
   maxBankRate: 0.12,
   cohortApplicationRate: 0.0006,
