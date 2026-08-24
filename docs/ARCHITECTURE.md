@@ -46,6 +46,29 @@ Ordering also has teeth. Wages are paid at 300 and debt service falls due at
 and falls into arrears on a bill it could have met. `production` therefore holds
 back whatever is due to lenders in the next few days before paying wages.
 
+## Threads
+
+The engine is single-threaded and deliberately so. Every system posts to one
+shared ledger, which is the definition of a contended critical section, and
+JavaScript workers have no shared heap — parallelising a tick would mean either
+rewriting all state as typed arrays in a `SharedArrayBuffer`, losing the
+plain-data world, or structured-cloning the world every tick, which costs more
+than the tick does. Determinism, which underpins saves, replays, every test and
+the calibration harness, is the thing that would be spent for it.
+
+Threads are used where the work is genuinely independent:
+
+- **Calibration** runs one seed per worker with no shared state.
+- **The dashboard** runs the engine on a worker that owns the world
+  exclusively, and posts compact snapshots to the page. There is still exactly
+  one thread advancing the simulation, so determinism is untouched, but the
+  page no longer shares a thread with it: the clock runs at over a hundred
+  simulated days a second while clicks are still answered in about 25ms.
+
+The page never sees the world. Everything it draws crosses the boundary as a
+`DashboardSnapshot` — a few kilobytes of already-resolved values rather than
+the multi-megabyte world — and everything it does crosses back as a `Command`.
+
 ## Money
 
 `Money` is a branded integer number of pence. The brand means a raw number

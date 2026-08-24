@@ -42,6 +42,11 @@
     border-bottom: 1px solid var(--line); background: var(--panel-2);
   }
   section > .body { padding: 12px 14px; }
+  /* Wide content scrolls inside its own panel rather than being clipped by it. */
+  .scroller { overflow-x: auto; }
+  .actions { white-space: nowrap; }
+  .actions button { padding: 4px 8px; font-size: 12px; }
+  .sub { display: block; color: var(--dim); font-size: 11px; }
   .wide { grid-column: 1 / -1; }
   .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
   .tile { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }

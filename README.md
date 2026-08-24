@@ -57,9 +57,10 @@ adding a system that consumes randomness cannot shift the numbers any existing
 system sees. Same seed plus same commands always gives the same world — which is
 what makes saves, replays and balancing possible.
 
-**4. The engine is headless.** `src/` has no DOM reference. The dashboard reads
-the world and pushes commands, nothing more. You can run a thousand days in a
-test, or swap the front end entirely, without touching the simulation.
+**4. The engine is headless.** `src/` has no DOM reference. The dashboard runs
+it on a worker thread that owns the world, and draws the snapshots it posts
+back. You can run a thousand days in a test, or swap the front end entirely,
+without touching the simulation.
 
 **5. Player actions are data.** Everything you can do is a validated `Command`
 object applied at a defined point in the tick. That one boundary is what later
