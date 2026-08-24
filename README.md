@@ -183,21 +183,24 @@ baseline scores 67.8, and these are what it is made of:
   point. Restraining demand here changes output rather than prices. The
   consumption channel is built and switched off for that reason. See
   `docs/ROADMAP.md`.
-- **The bank is too profitable** — 23% return on equity against a 10% target,
-  which is what happens when credit losses are near zero (0.65% against 1%).
-- **The economy runs slightly hot** — 1.5% unemployment against a 4.5% target,
-  worth 7.9 of the score. Damping the cycle removed the busts and the labour
+- **The bank is too profitable** — 22% return on equity against a 12% target,
+  which is what happens when credit losses are near zero (0.69% against 1%).
+- **The economy runs slightly hot** — 1.6% unemployment against a 4.5% target,
+  worth 7.7 of the score. Damping the cycle removed the busts and the labour
   block has never been retuned against an economy without them; every figure in
   it was fitted to a cycling one.
-- **Latent firms cannot fail**, which is why the insolvency rate is measured
-  against the at-risk population rather than the whole economy. See
-  "Watch the denominator" in `docs/CALIBRATION.md`.
+- **New firms are born average-sized.** Entry and exit move a pool's headcount
+  and stock in proportion to its firm count, so the average firm is the same
+  size on both sides. Real entrants start small; that is left for the labour
+  retune, since modelling it is a net drain on employment that is already too
+  low.
 - **There is no regional labour market.** Firms hire against one economy-wide
   slack figure, so a region's firms can take on more staff than that region has
   people.
-- **Throughput** is ~335 ticks/second with 685 resolved firms, so a simulated
-  year takes about a second. A `standard` campaign is 1,208 runs in ~17 minutes
-  on 20 cores.
+- **Throughput** is ~590 ticks/second over a ten-year run on one core
+  (`npm run sim -- 3650`), so a simulated year takes under two seconds. Firms
+  accumulate as the LOD resolves them — 286 by year ten, 994 by year twenty —
+  and a longer run is slower for that reason. Campaigns spread one run per core.
 - **Regulation is reported, not enforced.** Breaching capital raises an event
   and nothing else happens yet.
 - **The rest of the market is scenery.** Rival banks hold aggregate books and

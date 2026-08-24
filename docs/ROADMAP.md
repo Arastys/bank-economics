@@ -6,24 +6,35 @@ the point of the structure.
 
 ## What is actually in the way
 
-The baseline scores 67.8 over 24 seeds at ten years. Three things are it:
+The baseline scores 25.6 over 24 seeds at ten years. Two things are most of it:
 
-- **Corporate insolvency, 40.5 — 60% of the total.** 3.81% of at-risk firms
-  fail a year against a 0.7% target, and *every parameter describing recovery
-  and loss moves the score by no measurable amount*. Firms fail into a
-  population nothing replenishes. This wants firm demography, not tuning, which
-  is why it has been promoted out of "medium term" below.
-- **Unemployment, 7.9 — and it is too low, not too high.** 1.52% against a 4.5%
+- **Inflation level, 8.4.** 4.04% against 2%. Monetary policy cannot help:
+  restraining demand here moves output rather than prices. See below.
+- **Unemployment, 7.7 — and it is too low, not too high.** 1.57% against a 4.5%
   target. Damping the business cycle removed the busts and the labour block has
   never been retuned against an economy without them; every figure in it was
   fitted to a cycling one. This one *is* tuning, and `neutralTightness` is the
-  dominant knob.
-- **Inflation level, 8.4.** 4.03% against 2%. Monetary policy cannot help:
-  restraining demand here moves output rather than prices. See below.
+  dominant knob. Removing the job leak that `risk.credit` was running made this
+  slightly worse and slightly more honest.
 
-The business cycle is no longer on this list. Its amplitude was mostly one
-defect — every firm settling pay on the same tick — and volatility has gone
-from 15.8 to 2.6.
+Then `nim` at 3.9 (4.84% against 2.5%) and `roe` at 2.3 (22.0% against 12%) —
+the bank is too profitable, which is a pricing question rather than an
+economic one.
+
+Two things have left this list.
+
+**Corporate insolvency, which was 40.5 of 67.8 — 60% of everything.** It was
+not an economy failing five times too fast. The rate counted failures among
+firms the player had lent to and divided by the number of firms the player had
+lent to, then compared the result against a whole-economy target; a population
+selected for having borrowed fails far more often than one that has not. Firm
+demography gave the latent 22,000 a failure process, which made the
+whole-economy denominator legitimate, and the term went to 0.0 at 0.77%
+against a 0.7% target. Worth remembering as the model's clearest case of a
+number being wrong about its own subject rather than wrong in value.
+
+**The business cycle.** Its amplitude was mostly one defect — every firm
+settling pay on the same tick — and volatility has gone from 15.8 to 1.9.
 
 Everything that drives the economy is in `DEFAULT_CONFIG`
 (`src/world/state.ts`) and `src/scenarios/uk2025.ts`. `npm run sim -- 1095`,
@@ -37,13 +48,19 @@ breach already raises `bank.breachedLimit`. Give it consequences: a supervisory
 letter, a dividend block, forced deleveraging, and ultimately resolution with
 the FSCS paying out covered depositors. One new system, no model changes.
 
-**Firm demography.** The single largest thing wrong with the model. Firms fail
-and none are ever born, so the population only falls and failures accumulate
-into a shrinking denominator: the insolvency penalty grows from 39 at three
-years to 58 at twenty. `company.founded` is already declared as an event and
-never emitted, and `promoteMember` already builds a firm out of a pool, so the
-machinery is mostly there. It would also make `cohortDispersion` usable, since
-permanent competitive losers could finally be replaced.
+**Firms entering as newcomers rather than as averages.** `firms.demography`
+now founds and fails firms inside the pools, but a birth and a death both move
+headcount and stock in proportion to the firm count, so the average firm is the
+same size on either side. Real entrants are small and grow, and real failures
+throw their staff onto the labour market. That was left out deliberately —
+it is a net drain on employment, and unemployment is already 3 points below
+target — so it is worth doing together with the labour retune above rather than
+before it. `firmEntrantSize` is the knob that does not exist yet.
+
+Firm demography also makes `cohortDispersion` usable at last: permanent
+competitive losers can finally be replaced, where before the sector just
+hollowed out. The campaign still shows dispersion costing 13.5 points at 0.04,
+which is now worth re-running rather than assuming.
 
 **Retail lending.** Mortgages and consumer credit as instrument types, plus
 personal credit demand in `credit.demand`. People already have credit grades,

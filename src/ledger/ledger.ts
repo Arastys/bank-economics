@@ -54,6 +54,14 @@ export function createLedger(journalCap = 2000): LedgerState {
  * `JSON.stringify`; a loaded save arrives without one and builds it on first
  * use. `ledger.accountsByOwner` stays as it is -- it is part of the saved
  * world and records ownership, where this is a lookup path and derived.
+ *
+ * The one thing that would break it: a second `LedgerState` object sharing the
+ * same `accounts` record, indexed and then kept while the first carries on
+ * opening accounts. Each would cache a view the other's writes never reach.
+ * `save` makes such a copy today -- `{ ...world.ledger, journal: [] }` -- but
+ * stringifies it on the spot and drops it, so no index is ever built against
+ * it. Anything that wants to hold a ledger copy should deep-copy the accounts
+ * or share the `LedgerState` object itself, not straddle the two.
  */
 const accountIndex = new WeakMap<LedgerState, Map<string, Map<AccountCode, Account>>>();
 

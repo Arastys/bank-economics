@@ -164,10 +164,13 @@ Do not turn subdivision up until that is understood. A knob that silently
 changes the economy is worse than no knob, and any calibration done with it on
 would be fitted to an artefact.
 
-Larger `cohortDispersion` has a separate and better-understood problem:
-permanent cost differences mean permanent competitive losers, and with no firm
-entry or exit they simply shrink and shed staff. At 0.09 unemployment reaches
-9.9% and output falls 3.7% a year. That one waits on firm demography.
+Larger `cohortDispersion` has a separate problem: permanent cost differences
+mean permanent competitive losers. Before `firms.demography` there was no way
+for them to be replaced, so a sector simply hollowed out — at 0.09 unemployment
+reached 9.9% and output fell 3.7% a year. Entry and exit now exist, so this is
+worth re-measuring rather than assumed; the most recent campaign still shows
+0.04 costing 13.5 points, but that was run against pools whose average firm
+size is held constant through a birth.
 
 ## Three years is not long enough
 
@@ -179,6 +182,10 @@ and the model was fine for three years. It was not fine for ten:
 | 3 years | 2.9% | 4.0% | 4.0% |
 | 6 years | 0.2% | 19.5% | 4.5% |
 | 10 years | 1.4% | 37.6% | 5.3% |
+
+Those are the figures as they stood then, kept as the record of what a short
+horizon hid; the insolvency column is on the old loan-book denominator and is
+not comparable with anything above.
 
 Two defects were hiding behind that horizon — firms with no margin objective,
 and people saving into a pot nothing spent — and both are written up in
@@ -248,47 +255,52 @@ settling excursion; the last is where it stands now.
 
 | component | observed | then | now |
 | --- | ---: | ---: | ---: |
-| corporate insolvency | 3.81% | 41.7 | 40.5 |
-| inflation level | 4.03% | 6.3 | 8.4 |
-| unemployment | 1.52% | 0.8 | 7.9 |
-| net interest margin | 4.79% | 0.6 | 3.8 |
-| return on equity | 23.34% | 1.7 | 2.9 |
-| inflation volatility | 2.79% | 15.8 | **2.6** |
-| output growth | −0.32% | 0.7 | 0.9 |
-| cost of risk | 0.65% | 0.4 | 0.5 |
-| unemployment volatility | 1.49% | 1.5 | 0.1 |
-| **total** | | **69.5** | **67.8** |
+| inflation level | 4.04% | 6.3 | 8.4 |
+| unemployment | 1.57% | 0.8 | 7.7 |
+| net interest margin | 4.84% | 0.6 | 3.9 |
+| return on equity | 21.96% | 1.7 | 2.3 |
+| inflation volatility | 2.53% | 15.8 | 1.9 |
+| output growth | −0.26% | 0.7 | 0.8 |
+| cost of risk | 0.69% | 0.4 | 0.4 |
+| unemployment volatility | 1.62% | 1.5 | 0.2 |
+| corporate insolvency | 0.77% | 41.7 | **0.0** |
+| **total** | | **69.5** | **25.6** |
 
 What moved and why, in order:
 
-- **Volatility fell six-fold**, from 15.8 to 2.6. Firms used to settle pay on
+- **Volatility fell eight-fold**, from 15.8 to 1.9. Firms used to settle pay on
   the same monthly tick from one economy-wide number, which is a
   synchronisation machine; they now settle on their own month of the year
   against a running index, so twelve vintages coexist. Heterogeneity of every
   kind helps here — the ability spread damps it further, monotonically.
-- **Unemployment went from free to 7.9.** An economy without busts runs hot:
-  1.52% against a 4.5% target. That is the volatility gain being handed back,
+- **Insolvency went from 41.7 to nothing**, and it was a measurement, not an
+  economy. See "Watch the denominator" below: it is the model's clearest case
+  of a number being wrong about its own subject rather than wrong in value.
+- **Unemployment went from free to 7.7.** An economy without busts runs hot:
+  1.57% against a 4.5% target. That is the volatility gain being handed back,
   and it is a calibration debt rather than a defect. The labour block has never
   been tuned against a damped economy; every figure in it was fitted to a
   cycling one.
 - **The bank got better off and further from target.** NIM and ROE both drift
   up in a stable economy with almost no credit losses.
-- **Insolvency has not moved at all**, and that is the finding.
-
 Two things follow, and both redirect effort.
 
-**Insolvency is the model, not the credit policy.** Every parameter governing
-recovery and loss — `lossGivenDefault`, `liquidationHaircut`,
-`liquidationVariance`, `liquidationCyclicality`, `workoutHaircutFactor` — moves
-the score by no measurable amount at 24 seeds. The largest term in the
-objective cannot be touched by any knob describing the thing it measures.
-Firms are simply failing, into a population nothing replenishes, which points
-at demography rather than at credit. It is now 60% of everything left.
+**A knob that describes a term is not evidence the term is parametric.** Every
+parameter governing recovery and loss — `lossGivenDefault`,
+`liquidationHaircut`, `liquidationVariance`, `liquidationCyclicality`,
+`workoutHaircutFactor` — moved the insolvency penalty by no measurable amount
+at 24 seeds while it was the largest item on the card. That was read for a long
+time as "insolvency is structural, so build firm demography". Half right: the
+demography was worth building, but what actually made the number wrong was that
+it described the loan book and was being scored against the economy. When a
+term will not move for any parameter that names it, check what population it is
+about before deciding what to build.
 
-**It was the swing, not the miss — and now it is neither.** Volatility used to
-cost two and a half times what the level did. Both are now small change beside
-insolvency, and the second largest item is an unemployment rate that is too
-*low*.
+**It was the swing, then the miss, and now it is the level.** Volatility used
+to cost two and a half times what the level did, then insolvency dwarfed both.
+What is left is an inflation rate two points too high and an unemployment rate
+three points too *low* — no longer a defect anywhere, just a calibration that
+was never done against the economy the model has now become.
 
 The policy parameters — `taylorInflationWeight`, `taylorOutputWeight`,
 `neutralRealRate` — still register no measurable effect even now that Bank Rate
@@ -301,16 +313,33 @@ backwards: it is sitting at a local optimum and should not move.
 
 ## Watch the denominator
 
-A metric can flatter the model without anyone lying. Corporate insolvency was
-measured against every firm in the economy, but only the ~1,500 simulated
-individually can fail at all — the other 20,000 are latent inside cohorts with
-no failure process. The rate read 0.12% against a 0.7% target, looking mildly
-too low. Measured against the firms actually at risk it is 3.76%: five times
-too high, and the second-largest item on the scorecard.
+A metric can flatter the model without anyone lying, and this one moved twice.
 
-Nothing about the model changed; the score went from 52 to 90 because the
-measurement stopped hiding it. Before trusting a metric, check that its
-denominator is the population the numerator can come from.
+Corporate insolvency was first measured against every firm in the economy,
+while only the few hundred simulated individually could fail at all — the other
+22,000 were latent inside cohorts with no failure process. The rate read 0.12%
+against a 0.7% target, looking mildly too low. Narrowing the denominator to the
+firms that could actually fail gave 3.8%: five times too high, and the score
+went from 52 to 90. Nothing about the model had changed.
+
+That was the right move and still the wrong number. A firm is only resolved
+because it borrowed from the player, so the narrow denominator describes a
+population *selected for having debt to default on* — that rate is the default
+rate on the loan book, which is a real and useful quantity, but it was being
+scored against a whole-economy target. It sat at 40.5 of a 67.8 score and no
+parameter describing recovery or loss would shift it, because nothing about
+recovery or loss was what was wrong.
+
+The fix was neither denominator. It was to give the latent 22,000 a failure
+process (`firms.demography`) so that the whole economy could be both numerator
+and denominator. The rate is now 0.77% against the 0.7% target and the term is
+0.0. Swapping the denominator alone would have read 0.10% — an order of
+magnitude *below* target — because 95% of the implied failures did not exist.
+
+The rule is not "prefer the wide denominator" or "prefer the narrow one". It is
+that the numerator and the denominator must describe the same population, and
+that when they do not, the repair usually belongs in the model rather than in
+the measurement. Ask what population the target is about before choosing.
 
 ## The score is a diagnostic, not a target
 
@@ -341,14 +370,23 @@ If you add a knob, put it in `SimConfig` and the tests will keep it honest.
 ## Practicalities
 
 - **Always use several seeds.** A single run tells you about that run.
-- **Three years minimum.** Year-on-year inflation has no history before then,
-  and the summary discards the first thirteen months for exactly that reason.
+- **Ten years minimum**, which is `MINIMUM_USEFUL_YEARS` and what every preset
+  uses. Three years is enough for year-on-year inflation to exist — the summary
+  discards the first thirteen months for that reason — but not enough for the
+  answer to mean anything: the economy is still inside its settling excursion,
+  and a campaign measured there tunes the excursion. A 4,992-run sweep taken at
+  five years recommended raising `savingsBufferDays` 30%, which reverses at ten
+  years and at twenty.
 - **Runs are parallel** across worker threads, one job per worker, no shared
   state — which is only possible because the engine is deterministic and
-  self-contained.
-- **Throughput is the binding constraint.** A full sweep is ~80 runs. At three
-  years and four cores that is tens of minutes. Shorten the horizon or narrow
-  `--params` while iterating.
+  self-contained. The runner defaults to one worker per core.
+- **Throughput is the binding constraint.** Shorten the horizon below ten years
+  only to prove the plumbing works, never to draw a conclusion; narrow
+  `--params` instead while iterating.
+- Balance checking costs more than it looks. `trialBalance` walks every account
+  in the economy, so the harness turns it down to every 30 ticks while the CLI
+  and the UI check every tick. The same run is roughly a third faster in the
+  harness, and that gap is now the largest single cost on the interactive path.
 - Balance checking is turned down to every 30 ticks inside the harness. The
   whole-economy scan is the single most expensive thing in a batch run, and the
   point here is throughput rather than forensics.

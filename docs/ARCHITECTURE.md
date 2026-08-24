@@ -34,6 +34,7 @@ slots in without renumbering.
 | 850 | `lod.sweep` | Fold idle entities away; prune dead records |
 | 900 | `accounting.periods` | Operating costs and depreciation |
 | 920 | `people.demography` | Births, ageing between life stages, retirement, death |
+| 930 | `firms.demography` | Firms founded and firms failing inside the pools |
 | 950 | `metrics.record` | Monthly time series and prudential ratios |
 | 980 | `accounting.yearEnd` | Tax, public spending, the annual close |
 
@@ -191,6 +192,14 @@ it accrues interest and shows up in credit assessment rather than sitting inert.
 - Nothing in the world holds a function, a `Map` or a class instance, so a save
   file is `JSON.stringify(world)` and load is the reverse, with a migration
   chain keyed on the version it upgrades *from*.
+- Lookups that want a `Map` live *beside* the world, in a `WeakMap` keyed on the
+  thing they index — entities by kind in `src/world/state.ts`, accounts by owner
+  and code in `src/ledger/ledger.ts`. They are derived, never authoritative, and
+  a restored save rebuilds them on first use, so nothing about the save format
+  changes and no migration is needed. Keying on the world also means a
+  calibration worker's discarded worlds take their indexes with them.
+  Invalidate by discarding, not by editing in place: the arrays these hand out
+  are snapshots, and callers iterate them while mutating the world.
 
 ## Extension points that already exist
 
