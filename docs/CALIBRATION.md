@@ -43,6 +43,42 @@ that something is.
 Read that as: unemployment is basically right, inflation is somewhat wrong and
 very volatile, and credit losses are catastrophically wrong. Work top-down.
 
+## Every number here has an error bar
+
+Run the same configuration on eight different seeds and the total lands
+anywhere between 68 and 148 — standard deviation 26. So a score on its own
+supports far less than it looks like it does, and the scorecard prints its
+uncertainty:
+
+```
+  TOTAL 87.8 ± 5.8   (73–117 across 6 seeds)
+  Anything smaller than about 12 points is inside the noise here.
+```
+
+Comparisons are much better resolved than levels, because every configuration
+is run on the *same* seeds. That pairs them: the seed's own contribution
+cancels, leaving only what the change did. A change worth 73 points has a
+paired standard deviation of 13; one with no real effect has a paired standard
+deviation of 0.2. The sweep and the search both compare this way, and both
+require a difference to clear two standard errors before believing it.
+
+That is why the sweep prints a dash rather than a small number:
+
+```
+  parameter                               -30%          +30%  improves
+  Price responsiveness               +13.2±2.9   +258.8±12.8  lower
+  MPC inertia                                —     -17.6±2.4  higher
+  Recovery variance                          —             —
+```
+
+Recovery variance does nothing measurable at this sample size. Reporting it as
+"0.26" would have invited someone to tune it.
+
+**Practical rule:** more seeds narrows a level, and you rarely need it narrow.
+More seeds also narrows a comparison, and that is usually what you are after.
+Six is the default because it is affordable; raise it when a decision turns on
+a difference of a few points.
+
 ## 2. Sweep before you search
 
 Roughly twenty parameters can be tuned. Most of them barely matter. `sweep`

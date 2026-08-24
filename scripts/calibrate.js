@@ -14,7 +14,7 @@
 import os from 'node:os';
 import { Worker } from 'node:worker_threads';
 import { fileURLToPath } from 'node:url';
-import { DEFAULT_TARGETS, scoreAll } from '../dist/src/calibration/targets.js';
+import { DEFAULT_TARGETS, score, scoreAll, spreadOf } from '../dist/src/calibration/targets.js';
 import { PARAMETERS, clampToRange } from '../dist/src/calibration/parameters.js';
 import { DEFAULT_CONFIG } from '../dist/src/world/state.js';
 
@@ -84,7 +84,31 @@ async function evaluate(overrides) {
     ),
   );
   const summaries = results.map((r) => r.summary);
-  return { score: scoreAll(summaries, DEFAULT_TARGETS), summaries };
+  // Totals stay in seed order so two configurations can be compared seed by
+  // seed rather than mean against mean.
+  const totals = summaries.map((summary) => score(summary, DEFAULT_TARGETS).total);
+  return { score: scoreAll(summaries, DEFAULT_TARGETS), summaries, totals };
+}
+
+/**
+ * Compare two configurations seed by seed.
+ *
+ * Pairing is what makes a sweep trustworthy. The absolute score swings by tens
+ * of points between seeds, but the same seed run twice differs only by what the
+ * change actually did, so the difference is far better resolved than either
+ * level: a change worth 73 points has a paired standard deviation of 13, and
+ * one with no real effect has a paired standard deviation of 0.2.
+ */
+function pairedDifference(before, after) {
+  const deltas = after.totals.map((value, index) => value - before.totals[index]);
+  const spread = spreadOf(deltas);
+  const mean = deltas.reduce((a, b) => a + b, 0) / deltas.length;
+  return {
+    mean,
+    standardError: spread.standardError,
+    // Two standard errors is the usual bar for "this is the change, not the seeds".
+    real: Math.abs(mean) > 2 * spread.standardError && Math.abs(mean) > 0.05,
+  };
 }
 
 // --- output ----------------------------------------------------------------
@@ -143,8 +167,8 @@ async function commandSweep() {
 
     // How much the score moves either side of baseline, and which single
     // metric it moves most — the second is what tells you why.
-    const deltaLow = lowResult.score.total - baseline.score.total;
-    const deltaHigh = highResult.score.total - baseline.score.total;
+    const deltaLow = pairedDifference(baseline, lowResult);
+    const deltaHigh = pairedDifference(baseline, highResult);
     // Movement is measured in tolerances, not raw units. Comparing raw
     // magnitudes just picks out whichever metric happens to be the largest
     // number, which is never the question being asked.
@@ -162,24 +186,36 @@ async function commandSweep() {
     rows.push({
       label: parameter.label,
       key: parameter.key,
-      influence: Math.max(Math.abs(deltaLow), Math.abs(deltaHigh)),
+      influence: deltaLow.real || deltaHigh.real
+        ? Math.max(Math.abs(deltaLow.mean), Math.abs(deltaHigh.mean))
+        : 0,
       deltaLow,
       deltaHigh,
-      best: deltaLow < deltaHigh ? 'lower' : 'higher',
+      matters: deltaLow.real || deltaHigh.real,
+      best: deltaLow.mean < deltaHigh.mean ? 'lower' : 'higher',
       drives: worst?.label ?? '',
     });
   }
 
   rows.sort((a, b) => b.influence - a.influence);
-  console.log(`\n\nSensitivity — how far the score moves at -30% / +30%\n`);
-  console.log(`  ${'parameter'.padEnd(30)} ${pad('-30%', 9)} ${pad('+30%', 9)}  ${'improves'.padEnd(9)} drives`);
+  console.log(`\n\nSensitivity — paired change in score at -30% / +30%\n`);
+  const show = (d) => (d.real ? `${d.mean >= 0 ? '+' : ''}${d.mean.toFixed(1)}\u00b1${d.standardError.toFixed(1)}` : '\u2014');
+  console.log(`  ${'parameter'.padEnd(30)} ${pad('-30%', 13)} ${pad('+30%', 13)}  ${'improves'.padEnd(9)} drives`);
   for (const row of rows) {
     console.log(
-      `  ${row.label.padEnd(30)} ${pad(row.deltaLow.toFixed(2), 9)} ${pad(row.deltaHigh.toFixed(2), 9)}  ${row.best.padEnd(9)} ${row.drives}`,
+      `  ${row.label.padEnd(30)} ${pad(show(row.deltaLow), 13)} ${pad(show(row.deltaHigh), 13)}  ${(row.matters ? row.best : '').padEnd(9)} ${row.matters ? row.drives : ''}`,
     );
   }
-  console.log(`\n  Parameters near the bottom barely move the score. Ignore them and`);
-  console.log(`  tune the handful at the top: node scripts/calibrate.js search --params ${rows.slice(0, 4).map((r) => r.key).join(',')}`);
+  const real = rows.filter((r) => r.matters);
+  console.log(`\n  Compared seed by seed, so a difference here is the change and not the`);
+  console.log(`  seeds. A dash means the effect did not clear two standard errors:`);
+  console.log(`  those parameters do nothing measurable and are not worth tuning.`);
+  if (real.length > 0) {
+    console.log(`\n  ${real.length} of ${rows.length} parameters matter. Start with:`);
+    console.log(`  node scripts/calibrate.js search --params ${real.slice(0, 4).map((r) => r.key).join(',')}`);
+  } else {
+    console.log(`\n  Nothing cleared the noise. Raise --seeds, or widen the ranges swept.`);
+  }
 }
 
 async function commandSearch() {
@@ -198,11 +234,16 @@ async function commandSearch() {
 
       for (const value of candidates) {
         const trial = await evaluate({ ...config, [parameter.key]: value });
-        if (trial.score.total < best.score.total - 0.01) {
+        // Only take a move that beats the noise. Chasing differences smaller
+        // than the seeds themselves produce is how a search talks itself into
+        // a configuration no better than the one it started from.
+        const difference = pairedDifference(best, trial);
+        if (difference.mean < 0 && difference.real) {
           best = trial;
           config = { ...config, [parameter.key]: value };
           console.log(
-            `\r  pass ${pass}: ${parameter.label} -> ${value} (score ${best.score.total.toFixed(2)})`,
+            `\r  pass ${pass}: ${parameter.label} -> ${value} ` +
+              `(${difference.mean.toFixed(1)}\u00b1${difference.standardError.toFixed(1)}, now ${best.score.total.toFixed(1)})`,
           );
         }
       }
