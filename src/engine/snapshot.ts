@@ -1,4 +1,5 @@
 import { DEFAULT_CONFIG, WORLD_VERSION, type WorldState } from '../world/state.js';
+import { seedLatentContracts } from '../agents/latentContracts.js';
 
 export interface Snapshot {
   version: number;
@@ -189,6 +190,18 @@ migrations.set(10, (world) => {
   const config = world.config as unknown as Record<string, unknown>;
   config.firmDividendPayout = DEFAULT_CONFIG.firmDividendPayout;
   config.bankDividendPayout = DEFAULT_CONFIG.bankDividendPayout;
+  return world;
+});
+
+/**
+ * The latent balance sheet gets contracts. An old save's cohorts hold real
+ * deposits and real borrowings with nothing behind either, so they are given
+ * the same contracts a new world starts with -- priced off today's Bank Rate
+ * rather than the rate the save was written at, because that is the only rate
+ * anybody could observe now.
+ */
+migrations.set(11, (world) => {
+  seedLatentContracts(world);
   return world;
 });
 

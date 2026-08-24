@@ -6,56 +6,58 @@ the point of the structure.
 
 ## What is actually in the way
 
-One defect, many symptoms. **Almost none of the economy's balance sheet has
-contracts behind it**, and the two sides are inert to different degrees, which
-is written up in full in `docs/FLOWS.md`:
+**Not the balance sheet, for the first time.** It is 100% contracted on both
+sides at the open and 99.9% at year ten, where it used to be a loan book that
+was 0.6% contracted next to deposits that were 86%. The four steps that got
+there are below; `docs/FLOWS.md` has the map.
 
-| | at the open | year 10 |
-| --- | ---: | ---: |
-| bank loan book | £7,603m, 0.6% contracted | £7,523m, **0.1% contracted** |
-| bank customer deposits | £7,706m | £8,360m, **86.3% contracted** |
-| cohort borrowings | £7,550m, **no instruments** | — |
+The economy that came out is the best-calibrated one this model has had. Over
+24 seeds and ten years:
 
-By year ten the banking sector pays interest on 86% of its funding and earns
-interest on 0.1% of its lending. It is **loss-making by construction**, and
-that single fact accounts for the sector's −0.87% net interest margin, for the
-rival banks' equity falling from +£1.47bn to −£875m over twenty years on
-deposit interest alone, and for the 34.8% return on equity — which is what a
-bank with almost no equity left reports on the equity it has.
+| | before | now | target |
+| --- | ---: | ---: | ---: |
+| inflation | 2.14% | **1.45%** | 2.00% |
+| unemployment | 2.18% | **3.10%** | 4.50% |
+| output growth | 0.65% | 0.27% | 1.50% |
+| net interest margin | 2.95% | **1.74%** | 2.50% |
+| return on equity | 32.3% | **11.0%** | 10.0% |
+| corporate insolvency | 0.75% | 0.76% | 0.70% |
+| **penalty from the metrics** | 33.6 | **8.9** | — |
 
-It also explains why activating the loan book alone collapsed the economy into
-deflation: that moves the asset side from 0% to 100% while the liability side
-is already at 86%, so the economy swings from being quietly subsidised by the
-banks to paying £378m a year with no route back.
+Two things are in the way now, and both were hidden underneath the old defect.
 
-The second defect was the reason there was no route back: there were no
-dividends anywhere in `src/`, so profit closed to `RETAINED_EARNINGS` and
-stayed there and the model was only stable while nobody made money. **That is
-now fixed** — see step 2 below — and what it exposed is worth keeping in view:
-**almost nothing in this economy is profitable.** The number of entities
-paying a dividend falls from 33 in year one to five or six by year twelve,
-which is what gross margins collapsing towards zero looks like from the other
-end. The return path exists; there is very little travelling down it.
+**Bank Rate oscillates.** It swings between 0% and 10% and inflation
+volatility is 3.08% against a 1% target — 3.5 of the 8.9 points, and the
+largest single item left. Floating-rate pooled debt gave the MPC a channel it
+never had (this used to be filed as *monetary policy barely works*), and the
+Taylor rule was fitted when it had none. `taylorInflationWeight`,
+`taylorOutputWeight` and `policySmoothing` are all swept and none of them has
+been touched since the channel opened.
 
-### The rest of the card, once that is set aside
+**The player bank is priced for the economy that no longer exists.** It fails
+19 runs in 24, ending £10-20m under water on £18m of opening equity. That is
+not the economy: at a 2.1% deposit rate it pays £7.4m a year on its deposits
+and £7.8m in running costs against earning assets that are mostly reserves,
+and it only ever covered that because Bank Rate used to sit near its 12% cap.
+Dropping the default to 1.0% takes it to 8 survivals in 8, changing nothing
+else:
 
-The economy itself is in decent shape and should not be retuned until the
-above lands, because every figure would be fitted to a banking sector that
-cannot make money:
+| deposit rate | survived | median trough equity |
+| ---: | ---: | ---: |
+| 2.1% (today) | 1/8 | −£10.2m |
+| 1.5% | 5/8 | +£4.7m |
+| 1.0% | 8/8 | +£12.2m |
 
-- **Inflation 2.06%** against a 2% target, volatility 2.26%.
-- **Output growth 0.67%** against 1.5% — the model has trend growth at all for
-  the first time, through capital deepening.
-- **Corporate insolvency 0.75%** against 0.7%.
-- **Unemployment 2.18%** against 4.5%, the long-standing calibration debt: the
-  labour block was fitted to an economy with busts in it.
+This is the *player's* dial, which is why it has not simply been moved: a
+starting policy that is quietly unviable is a bad default, but the deeper
+problem is that nothing about the bank is reachable by the sweep. It also has
+no lending business to speak of — its book runs from £59.8m to £0.1m over ten
+years while writing 62 loans a year — and it pays retail deposit interest on a
+pool whose borrowing sits with the rest of the market. Retail lending would
+give it the other side of that.
 
-Two things are worth knowing before any tuning pass. Nothing about the bank is
-reachable by the sweep — `depositRate`, `lendingSpread`, `maxDebtServiceRatio`
-and `targetCapitalRatio` are all on `BankPolicy`, and the harness issues no
-commands, so the bank holds one frozen policy for ten years while the economy
-moves under it. And `targetCapitalRatio` from 0.12 to 0.16 changes results not
-at all, because that constraint never binds — worth checking on its own.
+`targetCapitalRatio` from 0.12 to 0.16 still changes results not at all,
+because that constraint never binds — worth checking on its own.
 
 ## Making the balance sheet live
 
@@ -97,17 +99,41 @@ makes the next one safe, and doing step 3 first is what caused the deflation.
    public spending are. Real dividend income is concentrated in wealth, and
    weighting it that way is worth doing — but it changes who gets richer
    rather than whether profit returns at all, and those are separate questions.
-3. **Contracts on the cohort balance sheet, both sides together.** Loans *and*
-   company-cohort deposits. Activated together the flows partly offset;
-   activated one at a time they do not, and the economy tips.
-4. **Recalibrate.** A debt-service channel changes the level of demand
-   permanently, and every figure in the labour and pricing blocks was fitted
-   without one. Expect the scorecard to get worse before it gets better; that
-   is the cost of the model being right rather than a reason to revert.
+3. ~~**Contracts on the cohort balance sheet, both sides together.**~~ **Done.**
+   A `loan.pool` for every pool's borrowing and a `deposit.instant` for every
+   pool's cash, seeded on the same tick by `seedLatentContracts`. 60 loans and
+   75 deposits cover the whole latent economy, which is the point: resolving
+   the economy was never the fix for scenery, contracts were.
 
-Only then are the AI banks worth finishing: an adaptive strategy that reacts to
-its own margin needs a margin that means something. The competition and
-rival-sector measurement work is written and measured, and is waiting on this.
+   `loan.pool` is deliberately not an ordinary loan. It reads its balance from
+   the ledger rather than caching it, because promotion and folding move a
+   pool's borrowings daily. It is interest-only and never matures, because
+   thousands of firms refinance a stock of debt rather than repaying it to
+   zero. It **floats** at Bank Rate plus a spread. And it cannot default: a
+   population is not a borrower, its members fail through `firms.demography`,
+   and writing off the aggregate would take out a sector on one missed
+   payment.
+
+   The floating rate is the part with consequences. £7.5bn of debt whose
+   service moves with Bank Rate is a transmission channel the model has never
+   had, and it is why inflation fell from 4.56% to 1.45% and unemployment rose
+   from 0.98% to 3.10% — and why Bank Rate now oscillates, above.
+
+   Total score 51.4 → 48.5, which understates it badly: the metrics went 51.4
+   → 8.9 and the difference is 19 seeds of player-bank insolvency at 50 points
+   each, which is the deposit-rate problem above rather than the economy.
+4. **Recalibrate.** This is now the next thing. The debt-service channel has
+   changed the level *and the volatility* of demand permanently, and every
+   figure in the labour, pricing and policy blocks was fitted without one.
+   Start with the MPC, which is carrying 3.5 of the 8.9 points on its own.
+
+The AI banks are now unblocked. An adaptive strategy that reacts to its own
+margin needs a margin that means something, and the rival sector finally has
+one — it earns on a contracted book and its equity grows from £1.47bn to
+£2.33bn over twenty years where it used to fall to −£875m. The competition
+and rival-sector measurement work is written and measured and was waiting on
+exactly this. It is also the answer to measuring campaigns against a player
+bank that nobody is playing.
 
 Everything that drives the economy is in `DEFAULT_CONFIG`
 (`src/world/state.ts`) and `src/scenarios/uk2025.ts`. `npm run sim -- 1095`,
@@ -116,7 +142,7 @@ tools.
 
 ## Near term
 
-Ranked by how much realism they buy, once the balance sheet is live.
+Ranked by how much realism they buy, now that the balance sheet is live.
 
 **Retail lending, and housing with it.** A UK bank is mostly mortgages, and
 house prices are the dominant channel between monetary policy and household
@@ -124,6 +150,11 @@ behaviour. `CreditApplication.purpose` already has a `'mortgage'` member with
 no product behind it. Collateral — a house worth something that can fall — is
 what makes a mortgage different from a big personal loan, and it is the single
 largest missing piece of UK realism.
+
+It is now also the player's most obvious business. The player takes retail
+deposits from `coh:hh:retail` and pays interest on them, while that pool's
+borrowing is serviced entirely by the rest of the market: the franchise is
+half-built by construction, and the missing half is the profitable one.
 
 **Inflation expectations.** Everything in the model is backward-looking:
 `wageIndexation` reads last month's inflation, the MPC reads year-on-year.
@@ -428,15 +459,16 @@ All firms makes a standard campaign a five-hour job and breaks interactive play,
 which wants the 100+ ticks/sec the dashboard is built around. All people is
 three orders of magnitude too expensive on both time and save size.
 
-More importantly it is **not the fix for the inert balance sheet**, which is a
-property of cohorts and is repaired with **75 aggregate instruments** — 15
-deposits and 60 loans, about the cost of 75 entities. Resolving the economy
-would be paying 68x throughput for something available for nothing.
+More importantly it was **never the fix for the inert balance sheet**. That
+was a property of cohorts and it was repaired with **135 aggregate
+instruments** — 75 deposits and 60 loans, about the cost of 135 entities.
+Resolving the economy would have been paying 68x throughput for something
+that was available for nothing.
 
-Worth raising resolution as an *experiment* once the balance sheet is live: at
-~2,000 firms a campaign is still affordable, and whether the scorecard moves is
-evidence about whether cohort aggregation is lying to us. Do not do it in the
-same step as making the balance sheet live, or neither result can be read.
+It is now worth raising resolution as an *experiment*: at ~2,000 firms a
+campaign is still affordable, and whether the scorecard moves is evidence
+about whether cohort aggregation is lying to us. Do it on its own, so the
+result can be read.
 
 One thing to watch: `maxResolvedEntities` is 1,500 and the model sits at ~600
 resolved at year ten, so the cap does not bind — but it reaches ~994 by year
@@ -463,7 +495,7 @@ being treated as though the cohort were a single firm.
 - **Keep the engine DOM-free.**
 - **Add a migration** whenever the world shape changes, and bump
   `WORLD_VERSION`.
-- **A balance is not a behaviour.** Most of this economy's balance sheet has no
-  contracts behind it and accrues nothing. Before building on any figure, check
-  it is live -- see `docs/FLOWS.md`, which lists what is real and what is
-  scenery.
+- **A balance is not a behaviour.** This economy's balance sheet is contracted
+  end to end now, but it took a long time to notice that it was not. Before
+  building on any figure, check something actually posts to it -- see
+  `docs/FLOWS.md`, which lists every flow and whether it is real.

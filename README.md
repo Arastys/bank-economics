@@ -27,8 +27,8 @@ node scripts/calibrate.js score  # how balanced is the economy right now?
 | --- | --- |
 | **Accounting** | Full double-entry ledger. Every entity — your bank, each firm, each pool of people, the state, the Bank of England — has real books that balance. |
 | **Your bank** | Loans (amortising and bullet), instant-access and term deposits, gilts and corporate bonds, central bank funding, a credit policy you set. |
-| **Companies** | Production, hiring and firing, pricing against cost, stock, investment, and demography — firms are founded and fail. They differ in how well they are run, and settle pay on their own month of the year rather than all at once. Borrowing, distress and insolvency with asset recoveries apply to firms simulated individually; the latent majority hold balance sheets but no contracts. |
-| **People** | Wages that reflect how good they are at the work, consumption budgeted against savings, and deposits that earn interest. They are born, grow up, work, retire and die, and the birth rate answers to prosperity. Their pre-existing borrowing is an opening balance with no contract behind it — it is serviced by nobody. |
+| **Companies** | Production, hiring and firing, pricing against cost, stock, investment, and demography — firms are founded and fail. They differ in how well they are run, and settle pay on their own month of the year rather than all at once. Borrowing, distress and insolvency with asset recoveries apply to firms simulated individually; the latent majority borrow and pay interest as pools. |
+| **People** | Wages that reflect how good they are at the work, consumption budgeted against savings, and deposits that earn interest. They are born, grow up, work, retire and die, and the birth rate answers to prosperity. Their borrowing is serviced at a floating rate, so a rate rise reaches household cash flow. |
 | **Markets** | A goods market that clears on price, a gilt curve, credit spreads, an interbank rate. |
 | **Labour** | A supply constraint on hiring from the working-age population, and pay that follows prices and labour-market tightness with downward nominal rigidity. |
 | **Policy** | A Monetary Policy Committee setting Bank Rate off inflation and the output gap; a state that taxes and spends. |
@@ -166,24 +166,26 @@ magic number inside a system, put it there instead, or the sweep cannot see it.
 
 Known rough edges, measured over 24 seeds and ten simulated years:
 
-- **Almost none of the economy's balance sheet has contracts behind it.** The
-  bank loan book is £7.6bn with 0.6% of it contracted at the open and 0.1% by
-  year ten, while 86% of customer deposits are contracted and paying interest.
-  The banking sector therefore pays for its funding and earns nothing on its
-  lending — it is loss-making by construction, and that one fact accounts for
-  its −0.87% net interest margin and for the rival sector spending its way to
-  −£4.3bn of equity by year twenty. The accounts balance perfectly throughout,
-  which is what makes it hard to spot. See `docs/FLOWS.md`.
+- **The player bank is priced for an economy that no longer exists.** Its
+  default 2.1% deposit rate costs £7.4m a year, running costs another £7.8m,
+  and its earning assets are mostly reserves — which only covered that while
+  Bank Rate sat near its 12% cap. It now fails 19 runs in 24. Dropping the
+  default to 1.0% takes it to 8 survivals in 8 and changes nothing else, but
+  it is the player's dial, and the deeper problem is that no swept parameter
+  reaches `BankPolicy` at all. See `docs/ROADMAP.md`.
+- **Bank Rate oscillates**, between 0% and 10%, with inflation volatility at
+  3.08% against a 1% target. Floating-rate pooled debt gave the MPC a
+  transmission channel it never had, and the Taylor rule was fitted when it
+  had none.
 - **Almost nothing in the economy is profitable.** Firms and banks now pay
   dividends, so profit has a route back to households, and what that exposed
   is how little travels down it: the number of entities paying one falls from
   33 in year one to five or six by year twelve. Gross margins collapse towards
   zero over a decade, which is the same fact seen from the other end.
-- **Monetary policy barely works.** Bank Rate reaches investment spending, but
-  pinning it across a 900 basis point span moves inflation by a fraction of a
-  point. Restraining demand here changes output rather than prices. The
-  consumption channel is built and switched off for that reason. See
-  `docs/ROADMAP.md`.
+- **The consumption channel is still switched off.** It was disabled back when
+  monetary policy barely worked; policy now reaches the whole economy through
+  the debt service on £7.5bn of floating-rate pooled borrowing, so the reason
+  it was switched off no longer holds. See `docs/ROADMAP.md`.
 - **Nothing about the bank is calibratable.** `depositRate`, `lendingSpread`,
   `maxDebtServiceRatio` and `targetCapitalRatio` all live on `BankPolicy`,
   which no swept parameter reaches, and the calibration harness issues no

@@ -347,6 +347,11 @@ const RISK_WEIGHT_BY_GRADE: Record<CreditGrade, number> = {
   CCC: 1.5,
 };
 
+/** Shared with any other product that lends against a credit grade. */
+export function riskWeightForGrade(grade: CreditGrade | undefined): number {
+  return RISK_WEIGHT_BY_GRADE[grade ?? 'BB'] ?? 1;
+}
+
 function loanBehaviour(key: string, label: string): InstrumentType {
   return {
     key,
@@ -366,7 +371,7 @@ function loanBehaviour(key: string, label: string): InstrumentType {
     },
     onDefault: defaultLoan,
     riskWeight(inst) {
-      return RISK_WEIGHT_BY_GRADE[inst.grade ?? 'BB'] ?? 1;
+      return riskWeightForGrade(inst.grade);
     },
     hqlaFactor() {
       return 0;

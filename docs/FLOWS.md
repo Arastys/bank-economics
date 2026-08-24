@@ -28,9 +28,9 @@ the balance sheet the whole time.
 | Consumption | people | firms | `economy.goodsMarket`, daily | **live** |
 | Investment | firms | firms | `economy.goodsMarket`, buys `FIXED_ASSETS` | **live** |
 | Deposit interest | banks | **person** cohorts, resolved customers | `deposit.*` instrument, daily | **live** |
-| Deposit interest | banks | **company** cohorts | — | **scenery** — company cohorts have no deposit instrument |
+| Deposit interest | banks | **company** cohorts | `deposit.instant`, daily | **live** |
 | Loan interest + principal | resolved borrowers | banks | `loan.*` instrument | **live** |
-| Loan interest | latent economy | banks | — | **scenery** — no instruments exist against £7.55bn of cohort borrowings |
+| Loan interest | latent economy | banks | `loan.pool`, floating, monthly | **live** |
 | Interest on reserves | central bank | banks | `bank.treasury`, daily at Bank Rate | **live** |
 | Gilt coupons | government | holders | `bond.*` instrument | **live** |
 | Bank operating costs | banks | people | `accounting.periods`, monthly | **live** |
@@ -42,26 +42,36 @@ the balance sheet the whole time.
 
 ## How much of the balance sheet is scenery
 
+**None of it, now.** This section used to be the point of the file:
+
 | | at the open | year 10 |
 | --- | ---: | ---: |
-| Bank loan book | £7,603m, **0.6% contracted** | £7,523m, **0.1% contracted** |
+| Bank loan book | £7,603m, 0.6% contracted | £7,523m, **0.1% contracted** |
 | Bank customer deposits | £7,706m | £8,360m, **86.3% contracted** |
 | Cohort borrowings | £7,550m, **no instruments** | — |
+
+and it now reads:
+
+| | at the open | year 10 |
+| --- | ---: | ---: |
+| Bank loan book | £7,603m, **100% contracted** | £7,520m, **100% contracted** |
+| Bank customer deposits | £7,706m, **100% contracted** | £7,099m, **99.9% contracted** |
 | Reserves and gilts | £1,591m, live | — |
 
-The asymmetry is the important part, and it is not a calibration problem. By
-year ten the banking sector **pays interest on 86% of its funding and earns
-interest on 0.1% of its lending**. It is loss-making by construction, which is
-what the sector's −0.87% net interest margin is, and what −£5.52bn of
-accumulated bank losses by year twenty is — a figure that is part inert loan
-book and part the running costs the rivals now pay out of equity because that
-book earns them nothing.
+The asymmetry was the whole problem, and it was never a calibration one. A
+sector that paid interest on 86% of its funding and earned it on 0.1% of its
+lending was loss-making by construction: −0.87% net interest margin, and the
+rival banks spending their way from +£1.47bn of equity to −£875m.
 
-While that holds, the banks are quietly handing households an unfunded income
-stream. It is why activating the loan book on its own was so violent: that
-switches the asset side from 0% to 100% while the liability side is already at
-86%, so the economy swings from being subsidised to paying £378m a year with no
-return path, and deflates.
+It is also why activating the loan book on its own, early on, was so violent —
+that moved the asset side from 0% to 100% while the liability side was already
+at 86%, so the economy swung from being subsidised to paying £378m a year with
+no return path, and deflated. Doing both sides on the same tick, after the
+return paths existed, took inflation from 4.56% to 1.45% and the scorecard's
+metric penalty from 51.4 to 8.9.
+
+The habit that produced this file is still the point. Nothing here says a
+*future* balance will have a contract behind it.
 
 ## The circular flow, and where it leaks
 
@@ -96,22 +106,25 @@ could safely be made live:
    own cost-to-deposits ratio, 2.2% of deposits a year, so the sector's
    running costs reach households as pay.
 2. ~~dividends~~ — **done**, as above.
-3. contracts on **both** sides of the cohort balance sheet, activated together
-   so the flows partly offset rather than draining one way. **Still to do**,
-   and it is now the only thing between here and a live balance sheet. See
-   `docs/ROADMAP.md`.
+3. ~~contracts on **both** sides of the cohort balance sheet~~ — **done**,
+   activated on the same tick so the flows partly offset: a `loan.pool` and a
+   `deposit.instant` for every pool. See `docs/ROADMAP.md`.
 
-Steps 1 and 2 both add household income with no extra output behind them, so
-the economy is running hot — inflation 4.56%, unemployment 0.98% — and it is
-meant to be. Step 3 is the offsetting drain, and step 4 retunes what is left.
+Steps 1 and 2 added household income with no extra output behind it and the
+economy ran hot at 4.56% inflation. Step 3 was the offsetting drain and took
+it to 1.45%. What is left is a tuning pass, and two things worth knowing:
+Bank Rate now swings between 0% and 10%, because floating-rate debt gave the
+MPC a channel it never had, and the player bank is priced for the economy
+that existed before all this.
 
 ## Level of detail: what is aggregated, and what that costs
 
-Nothing about the flows above changes with resolution. Cohorts can hold
-contracts, and it is not many of them: 15 cohorts need **15 deposit
-instruments and 60 loan instruments — 75 in all** to make the entire latent
-balance sheet live, which costs about as much as 75 entities, i.e. nothing.
-**Resolving the economy is not the fix for scenery**; contracts are.
+Nothing about the flows above changes with resolution, and the thing usually
+proposed to fix them was never the fix. Cohorts hold contracts: **75 deposits
+and 60 loans** cover the entire latent balance sheet, at about the cost of
+135 entities, i.e. nothing. That is the whole repair, and it is 250 times
+cheaper than resolving the firms it covers. **Resolution was never the fix
+for scenery**; contracts were.
 
 Measured cost of resolution, for when that question comes up anyway:
 **~3.5µs per entity per tick** and **~2,070 bytes per entity in a save**, both

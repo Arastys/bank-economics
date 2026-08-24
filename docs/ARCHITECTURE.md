@@ -181,29 +181,37 @@ but its residual balance sheet is not, so its claims pass to its sector.
 Debt carved out of a pool gets a real contract attached (`attachLegacyDebt`), so
 it accrues interest and shows up in credit assessment rather than sitting inert.
 
-### What a cohort's balance sheet does not do
+### What a cohort's balance sheet does
 
-The accounts are real; the **contracts are not there until a member is
-promoted**. A cohort holds its deposits and its borrowings as ledger balances
-with nothing to accrue against, so:
+The accounts are real and so are the contracts. Every pool holds a
+`deposit.instant` with its bank and a `loan.pool` with each of the rivals
+funding its borrowing, seeded by `seedLatentContracts`. Nothing in the
+instrument layer requires an obligor to be an individual, which is what makes
+this cheap: 75 deposits and 60 loans cover the entire latent economy.
 
-- latent borrowing pays no interest -- £7.55bn of it at the open, against zero
-  loan instruments;
-- **company** cohorts earn no deposit interest, because only person cohorts are
-  given a deposit instrument when the world is built.
+`loan.pool` is not an ordinary loan, and each difference is there because a
+population is not a borrower:
 
-This is the single most misleading thing about the level-of-detail design, and
-it is invisible in the accounts: a pool can carry billions and behave like
-scenery for a century while every balance sheet balances perfectly. It is why
-the banking sector is loss-making by construction -- by year ten it pays
-interest on 86% of its funding and earns interest on 0.1% of its lending.
+- it **reads its balance from the ledger** every day, because promotion and
+  folding move a pool's borrowings constantly and a cached figure drifts;
+- it is **interest-only and never matures** -- thousands of firms refinance a
+  stock of debt rather than repaying it to zero;
+- it **floats** at Bank Rate plus a spread, which is what puts monetary policy
+  in front of the whole economy's debt service rather than that of a few
+  hundred resolved borrowers;
+- it **cannot default**. Members fail through `firms.demography`; writing off
+  the aggregate would take out a sector's lending on one missed payment.
 
-Cohorts *can* hold contracts; nothing in the instrument layer requires an
-obligor to be an individual, and `windUpBorrower` already declines anything
-that is not a company. Seventy-five aggregate instruments -- 15 deposits and
-60 loans -- would make the whole latent balance sheet live. See `docs/FLOWS.md` for the map of what is real and
-what is not, and `docs/ROADMAP.md` for the order it has to be done in --
-activating one side without the other tips the economy into deflation.
+This used to be the single most misleading thing about the level-of-detail
+design: a pool carried billions, accrued nothing, and every balance sheet
+balanced perfectly the whole time. If you add a new kind of pooled balance,
+give it a contract in the same place, and record it in `docs/FLOWS.md`.
+
+One imprecision worth knowing about. A pool's borrowing is split across the
+rivals in proportion to their deposits, but `attachLegacyDebt` hands a
+promoted member's carved-out share wholly to `cohort.bankId`. The sector
+totals stay right; which rival earns the interest drifts slightly as members
+are promoted.
 
 ## Determinism
 

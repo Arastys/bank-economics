@@ -32,11 +32,12 @@ Non-negotiable, and covered by tests:
   reports it as having no influence and you conclude the mechanism does not
   matter. This has happened twice; `tests/calibration.test.ts` now guards it.
 - Bump `WORLD_VERSION` and add a migration whenever the world shape changes.
-- **A balance is not a behaviour.** Most of this economy's balance sheet has no
-  contracts behind it and accrues nothing, while looking entirely normal in the
-  accounts. Before building on any figure, confirm something actually posts to
-  it. `docs/FLOWS.md` records what is live and what is scenery; add to it when
-  you find out either way.
+- **A balance is not a behaviour.** A ledger balance with no contract behind it
+  accrues nothing and looks entirely normal in the accounts. Most of this
+  economy was in that state for a long time before anybody noticed. Before
+  building on any figure, confirm something actually posts to it, and give any
+  new pooled balance a contract in `seedLatentContracts`. `docs/FLOWS.md`
+  records what is live and what is not; add to it when you find out either way.
 
 ## Verifying edits
 

@@ -5,6 +5,7 @@ import { addYears, fromDate, addMonths } from '../core/time.js';
 import { AC, depositCode } from '../ledger/accounts.js';
 import { createLedger, openWithCapital, post, credit, debit } from '../ledger/ledger.js';
 import { drawPayReviewMonth, drawQuality } from '../agents/lod.js';
+import { seedLatentContracts } from '../agents/latentContracts.js';
 import { goingRateFinancials } from '../agents/credit.js';
 import { createMetrics } from '../metrics/recorder.js';
 import { BOND_FIXED } from '../instruments/bond.js';
@@ -571,26 +572,13 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
     });
   }
 
-  for (const cohort of personCohorts) {
-    addInstrument(world, {
-      id: nextId(ids, 'dep'),
-      type: DEPOSIT_INSTANT,
-      holderId: cohort.id,
-      obligorId: cohort.bankId!,
-      principal: ZERO,
-      outstanding: ZERO,
-      rate:
-        cohort.bankId === PLAYER_BANK_ID
-          ? spec.playerBank.policy.depositRate
-          : spec.centralBank.bankRate * 0.6,
-      accrued: ZERO,
-      openedOn: startTick,
-      nextPaymentOn: addMonths(startTick, 1),
-      paymentIntervalMonths: 1,
-      status: 'active',
-      data: {},
-    });
-  }
+  // Every pool's deposits and every pool's borrowings, on the same tick.
+  // Activating one side without the other is what tipped the economy into
+  // deflation the first time this was tried: the liability side was already
+  // 86% contracted and the asset side was 0.6%, so switching the assets on
+  // alone moved the banking sector from subsidising the economy to charging
+  // it £378m a year with nothing coming back. See docs/ROADMAP.md.
+  seedLatentContracts(world);
 
   // --- starting economic aggregates ----------------------------------------
 

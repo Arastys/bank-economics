@@ -347,7 +347,7 @@ export interface WorldState {
   config: SimConfig;
 }
 
-export const WORLD_VERSION = 11;
+export const WORLD_VERSION = 12;
 
 export const DEFAULT_CONFIG: SimConfig = {
   applicationValidityDays: 14,
