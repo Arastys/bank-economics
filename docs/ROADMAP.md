@@ -18,10 +18,10 @@ is written up in full in `docs/FLOWS.md`:
 
 By year ten the banking sector pays interest on 86% of its funding and earns
 interest on 0.1% of its lending. It is **loss-making by construction**, and
-that single fact accounts for the sector's −0.87% net interest margin, its
-−£2.43bn of accumulated retained earnings by year twenty, the player's bank
-failing to survive 11 runs in 24, and the 36.3% return on equity — which is
-what a bank with almost no equity left reports on the equity it has.
+that single fact accounts for the sector's −0.87% net interest margin, for the
+rival banks' equity falling from +£1.47bn to −£875m over twenty years on
+deposit interest alone, and for the 34.8% return on equity — which is what a
+bank with almost no equity left reports on the equity it has.
 
 It also explains why activating the loan book alone collapsed the economy into
 deflation: that moves the asset side from 0% to 100% while the liability side
@@ -61,11 +61,24 @@ at all, because that constraint never binds — worth checking on its own.
 This is a prerequisite, not a feature. The order matters: each step is what
 makes the next one safe, and doing step 3 first is what caused the deflation.
 
-1. **Rival banks get operating costs.** They are set to `ZERO`, so a bank with
-   billions on its balance sheet employs nobody and its entire margin leaves
-   the circular flow. The player's costs already pay out to people as income;
-   the rivals' should too. Scaling them at the player's own cost-to-deposits
-   ratio is the least invented figure available.
+1. ~~**Rival banks get operating costs.**~~ **Done.** They were set to `ZERO`,
+   so four fifths of the banking sector employed nobody and its entire margin
+   left the circular flow. They now pay at the player's own cost-to-deposits
+   ratio — 2.2% of deposits a year, £13.5m a month between the four of them.
+
+   Over 24 seeds and ten years the score went **58.6 ± 14.0 → 37.4 ± 2.3** and
+   the player's bank **survived 24 runs in 24 rather than 12**. That is the
+   result worth keeping: most of its insolvency was a demand problem rather
+   than a balance-sheet one, and the seed-to-seed spread nearly vanished with
+   it. The cost is a hotter economy — inflation 2.14% → 3.83%, unemployment
+   2.18% → 1.25% — because £162m a year of household income appeared with no
+   extra output behind it. Step 4 is where that gets tuned, not before.
+
+   The rivals are not paying for this out of earnings, and that is expected:
+   their loan book earns nothing, so it comes out of equity. The sector
+   reaches −£865m by year ten where it used to reach +£653m, and −£4.28bn by
+   year twenty where it used to reach −£875m. It was already heading there;
+   this makes it arrive sooner. **Step 3 is what pays for it.**
 2. **Dividends.** Firms and banks distribute a share of profit to person
    cohorts. This is the missing return path, and it has to exist before any
    sector is allowed to be profitable.

@@ -180,7 +180,7 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
   });
 
   const rivals = aiBankIds(spec.otherBanks.count);
-  rivals.forEach((id, i) => {
+  const rivalBanks = rivals.map((id, i) =>
     addEntity(world, {
       id,
       kind: 'bank',
@@ -189,9 +189,10 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
       createdOn: startTick,
       isPlayer: false,
       policy: structuredClone(spec.playerBank.policy),
+      // Set below, once the deposits they hold are known.
       operatingCostPerMonth: ZERO,
-    });
-  });
+    }),
+  );
 
   // --- the latent economy --------------------------------------------------
 
@@ -436,6 +437,22 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
     );
     playerDeposits = add(playerDeposits, cash);
     playerCorporateLoans = add(playerCorporateLoans, customer.loan);
+  }
+
+  // Running a bank costs money, and that money is somebody else's salary.
+  // The player's costs already reach households as income; the rest of the
+  // market's did not, so four fifths of the banking sector employed nobody and
+  // its entire margin left the circular flow.
+  //
+  // Scaled at the player's own cost-to-deposits ratio rather than a figure
+  // invented for the purpose: whatever it costs the player to run a pound of
+  // deposits, it costs a rival the same. Fixed at the opening balance sheet,
+  // like the player's, so a bank's costs do not fall the month it loses
+  // customers.
+  const costToDeposits =
+    playerDeposits > 0 ? spec.playerBank.operatingCostPerMonth / playerDeposits : 0;
+  for (const bank of rivalBanks) {
+    bank.operatingCostPerMonth = scale(otherDeposits.get(bank.id) ?? ZERO, costToDeposits);
   }
 
   const playerLoans = playerCorporateLoans;

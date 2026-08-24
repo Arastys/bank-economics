@@ -170,10 +170,9 @@ Known rough edges, measured over 24 seeds and ten simulated years:
   year ten, while 86% of customer deposits are contracted and paying interest.
   The banking sector therefore pays for its funding and earns nothing on its
   lending — it is loss-making by construction, and that one fact accounts for
-  its −0.87% net interest margin, its −£2.4bn of accumulated losses by year
-  twenty, and the player's bank failing to survive 11 runs in 24. The accounts
-  balance perfectly throughout, which is what makes it hard to spot. See
-  `docs/FLOWS.md`.
+  its −0.87% net interest margin and for the rival sector spending its way to
+  −£4.3bn of equity by year twenty. The accounts balance perfectly throughout,
+  which is what makes it hard to spot. See `docs/FLOWS.md`.
 - **There are no dividends anywhere.** Firms and banks close the year to
   retained earnings and nothing ever leaves, so household income is wages,
   deposit interest, bank operating costs and recycled tax — profit is not in
@@ -209,8 +208,10 @@ Known rough edges, measured over 24 seeds and ten simulated years:
 - **Regulation is reported, not enforced.** Breaching capital raises an event
   and nothing else happens yet.
 - **Rival banks do not compete.** There are four of them holding a quarter of
-  the market each, but they all run the player's default policy, never change
-  it, and never receive a loan application.
+  the market each. They carry running costs now, at the player's own
+  cost-to-deposits ratio, so the sector employs people and pays them — but
+  they all run the player's default policy, never change it, and never
+  receive a loan application.
 
 Where to read next:
 

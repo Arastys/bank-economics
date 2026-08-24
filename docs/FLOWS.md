@@ -33,7 +33,7 @@ the balance sheet the whole time.
 | Loan interest | latent economy | banks | — | **scenery** — no instruments exist against £7.55bn of cohort borrowings |
 | Interest on reserves | central bank | banks | `bank.treasury`, daily at Bank Rate | **live** |
 | Gilt coupons | government | holders | `bond.*` instrument | **live** |
-| Bank operating costs | banks | people | `accounting.periods`, monthly | **live for the player only** — rivals are set to `ZERO` |
+| Bank operating costs | banks | people | `accounting.periods`, monthly | **live** |
 | Corporation tax | firms + banks | government | `accounting.yearEnd` | **live** |
 | Public spending | government | people | `accounting.yearEnd`, spends the year's receipts | **live** |
 | Firm profit | firms | — | closes to `RETAINED_EARNINGS` | **no outflow exists** |
@@ -78,7 +78,9 @@ Nobody is profitable, so the missing return path has never bitten.
 It will bite the moment the balance sheet is made live. Three things have to
 exist before that is safe:
 
-1. rival banks with operating costs, so their margin reaches households as pay;
+1. ~~rival banks with operating costs~~ — **done**. They pay at the player's
+   own cost-to-deposits ratio, 2.2% of deposits a year, so the sector's
+   running costs reach households as pay. See `docs/ROADMAP.md`.
 2. dividends, so retained profit has any route back at all;
 3. contracts on **both** sides of the cohort balance sheet, activated together
    so the flows partly offset rather than draining one way.

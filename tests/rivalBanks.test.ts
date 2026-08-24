@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { newGame } from '../src/index.js';
 import { buildWorld } from '../src/scenarios/build.js';
 import { uk2025 } from '../src/scenarios/uk2025.js';
+import { isMonthEnd } from '../src/core/time.js';
 import { AC } from '../src/ledger/accounts.js';
 import { naturalBalance, trialBalance } from '../src/ledger/ledger.js';
+import { personViews } from '../src/agents/views.js';
+import { accountingSystem } from '../src/systems/accounting.js';
 import { cohorts, entitiesOfKind, type WorldState } from '../src/world/state.js';
 
 const build = (count: number, seed = 11) =>
@@ -62,5 +66,53 @@ describe('the rest of the market is several banks', () => {
     const world = build(4);
     expect(world.otherBanksId).toBe('bank:market');
     expect(rivals(world).map((b) => b.id)).toContain(world.otherBanksId);
+  });
+});
+
+/**
+ * A bank employs people. The player pays for staff, premises and systems every
+ * month and that money lands in households as income; until this, the rest of
+ * the market -- four fifths of the sector -- ran on nothing and paid nobody.
+ */
+describe('the rest of the market costs something to run', () => {
+  const costRate = (world: WorldState, id: string) => {
+    const bank = entitiesOfKind(world, 'bank').find((b) => b.id === id)!;
+    return bank.operatingCostPerMonth / naturalBalance(world.ledger, id, AC.CUSTOMER_DEPOSITS);
+  };
+
+  it('charges a rival what a pound of deposits costs the player to run', () => {
+    const world = build(4);
+    const player = costRate(world, world.playerBankId);
+    expect(player).toBeGreaterThan(0);
+
+    for (const bank of rivals(world)) {
+      expect(bank.operatingCostPerMonth).toBeGreaterThan(0);
+      // Within a penny of the player rate: the same cost base, a bigger book.
+      const expected = naturalBalance(world.ledger, bank.id, AC.CUSTOMER_DEPOSITS) * player;
+      expect(Math.abs(bank.operatingCostPerMonth - expected)).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('pays them out to households as income', () => {
+    const engine = newGame('uk2025', { seed: 5 });
+    const { world } = engine;
+    const income = () =>
+      personViews(world).reduce((t, h) => t + naturalBalance(world.ledger, h.id, AC.WAGE_INCOME), 0);
+
+    const before = income();
+    do {
+      world.tick += 1;
+    } while (!isMonthEnd(world.tick));
+    accountingSystem.run(engine.context());
+
+    // Nothing else pays households on a bare month end, so the whole rise is
+    // bank running costs: the player's and the rivals' together.
+    const banks = entitiesOfKind(world, 'bank');
+    const wageBill = banks.reduce((t, b) => t + b.operatingCostPerMonth, 0);
+    const rivalShare = rivals(world).reduce((t, b) => t + b.operatingCostPerMonth, 0);
+
+    expect(rivalShare).toBeGreaterThan(0);
+    expect(income() - before).toBe(wageBill);
+    expect(trialBalance(world.ledger)).toBe(0);
   });
 });
