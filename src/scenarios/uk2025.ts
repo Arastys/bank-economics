@@ -92,6 +92,10 @@ export const uk2025: ScenarioSpec = {
     medium('health', 'midlands', 90, 200),
   ],
 
+  // The `coh:hh:` prefix is left over from when these were households. It is
+  // deliberate: identity-seeded draws -- a pool's ability, a firm's quality --
+  // hash the id, so renaming them would silently change every draw and every
+  // saved game for a cosmetic gain.
   personCohorts: [
     people('london', 60000, pounds(180), 0.94),
     people('south', 80000, pounds(140), 0.95),
@@ -102,10 +106,13 @@ export const uk2025: ScenarioSpec = {
 
   existingCorporateCustomers: 60,
 
-  // Subdivision is available but deliberately off: it damps inflation
-  // volatility (7.2% -> 5.4%) but pushes the inflation *level* from 2.4% to
-  // 7.2%, and that happens even with identical slices, which it should not.
-  // See docs/CALIBRATION.md before turning it up.
+  // Subdivision is available but deliberately off. Splitting a pool into
+  // *identical* pools should change nothing and does: over 16 seeds at ten
+  // years it damps inflation volatility (2.74% -> 2.31% at twelve slices) and
+  // pushes the level the wrong way (4.10% -> 4.23%), for a net 68.3 -> 73.5.
+  // The volatility gain is real and worth having once the level shift is
+  // understood; until then a knob that silently moves the economy is worse
+  // than no knob. See docs/CALIBRATION.md before turning it up.
   cohortSubdivision: 1,
   cohortDispersion: 0.02,
 

@@ -135,16 +135,25 @@ identical giants.
 It is **off by default**, because it changes aggregate outcomes in a way it
 should not:
 
-| configuration | inflation | inflation volatility | unemployment |
-| --- | ---: | ---: | ---: |
-| 10 cohorts (default) | 2.39% | 6.79% | 4.0% |
-| 12x, identical slices | 7.23% | 5.38% | 3.2% |
-| 12x, small dispersion | 9.29% | 5.67% | 2.8% |
+Sixteen seeds, ten years, identical slices throughout:
 
-The volatility improvement is real and worth having. The problem is the middle
-row: splitting a pool into twelve *identical* pools should be a no-op, and it
-moves inflation by five points. Something in the per-cohort logic does not
+| slices | inflation | inflation volatility | score |
+| ---: | ---: | ---: | ---: |
+| 1 (default) | 4.10% | 2.74% | 68.3 |
+| 4 | 4.22% | 2.41% | 70.2 |
+| 12 | 4.23% | 2.31% | 73.5 |
+
+The volatility improvement is real and worth having. The problem is that
+splitting a pool into *identical* pools should be a no-op and is not: the level
+moves too, and the score gets worse. Something in the per-cohort logic does not
 scale with cohort size.
+
+The effect is much smaller than it was — it used to move inflation by five
+points, against 0.13 here — but that is mostly because the rest of the model
+stopped swinging so hard rather than because the non-linearity was found. It
+still points the same way at every level, and it still saturates rather than
+scaling with the number of slices, which says it is a step taken on the first
+split rather than something proportional.
 
 One cause was found and fixed — headcount was being rounded to whole people per
 cohort, so twelve pools shed fewer staff than one pool of the same size. That
@@ -172,7 +181,7 @@ and the model was fine for three years. It was not fine for ten:
 | 10 years | 1.4% | 37.6% | 5.3% |
 
 Two defects were hiding behind that horizon — firms with no margin objective,
-and households saving into a pot nothing spent — and both are written up in
+and people saving into a pot nothing spent — and both are written up in
 `docs/ROADMAP.md`. Neither was visible at three years, and the second was not
 visible until the first was fixed.
 
@@ -233,22 +242,38 @@ before anyone trusts a three-year number either.
 
 ## What the score is actually made of
 
-At the shipped defaults, twenty-four seeds, ten years — the first campaign run
-at a horizon outside the settling excursion:
+At the shipped defaults, twenty-four seeds, ten years. The first column is
+where the model stood when it was first measured at a horizon outside the
+settling excursion; the last is where it stands now.
 
-| component | penalty | share | after staggered pay |
+| component | observed | then | now |
 | --- | ---: | ---: | ---: |
-| corporate insolvency | 41.7 | 60% | 40.8 |
-| inflation volatility | 15.8 | 23% | **4.4** |
-| inflation level | 6.3 | 9% | 7.0 |
-| unemployment | 0.8 | 1% | **7.3** |
-| everything else | 4.9 | 7% | 7.7 |
-| **total** | **69.5** | | **67.2** |
+| corporate insolvency | 3.81% | 41.7 | 40.5 |
+| inflation level | 4.03% | 6.3 | 8.4 |
+| unemployment | 1.52% | 0.8 | 7.9 |
+| net interest margin | 4.79% | 0.6 | 3.8 |
+| return on equity | 23.34% | 1.7 | 2.9 |
+| inflation volatility | 2.79% | 15.8 | **2.6** |
+| output growth | −0.32% | 0.7 | 0.9 |
+| cost of risk | 0.65% | 0.4 | 0.5 |
+| unemployment volatility | 1.49% | 1.5 | 0.1 |
+| **total** | | **69.5** | **67.8** |
 
-The fourth column is the same seeds after firms stopped settling pay on the
-same tick. The volatility it targeted fell by 72%; the economy then ran too hot
-without its busts, and unemployment took back most of the gain. See
-`docs/ROADMAP.md`.
+What moved and why, in order:
+
+- **Volatility fell six-fold**, from 15.8 to 2.6. Firms used to settle pay on
+  the same monthly tick from one economy-wide number, which is a
+  synchronisation machine; they now settle on their own month of the year
+  against a running index, so twelve vintages coexist. Heterogeneity of every
+  kind helps here — the ability spread damps it further, monotonically.
+- **Unemployment went from free to 7.9.** An economy without busts runs hot:
+  1.52% against a 4.5% target. That is the volatility gain being handed back,
+  and it is a calibration debt rather than a defect. The labour block has never
+  been tuned against a damped economy; every figure in it was fitted to a
+  cycling one.
+- **The bank got better off and further from target.** NIM and ROE both drift
+  up in a stable economy with almost no credit losses.
+- **Insolvency has not moved at all**, and that is the finding.
 
 Two things follow, and both redirect effort.
 
@@ -258,11 +283,12 @@ recovery and loss — `lossGivenDefault`, `liquidationHaircut`,
 the score by no measurable amount at 24 seeds. The largest term in the
 objective cannot be touched by any knob describing the thing it measures.
 Firms are simply failing, into a population nothing replenishes, which points
-at demography rather than at credit.
+at demography rather than at credit. It is now 60% of everything left.
 
-**It is the swing, not the miss.** Inflation volatility costs two and a half
-times what the inflation level does. Tuning the level is tuning the smaller
-half of the smaller problem.
+**It was the swing, not the miss — and now it is neither.** Volatility used to
+cost two and a half times what the level did. Both are now small change beside
+insolvency, and the second largest item is an unemployment rate that is too
+*low*.
 
 The policy parameters — `taylorInflationWeight`, `taylorOutputWeight`,
 `neutralRealRate` — still register no measurable effect even now that Bank Rate

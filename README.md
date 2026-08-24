@@ -1,7 +1,7 @@
 # Bank Economics
 
 A simulation game in which you run a UK bank inside a working economy of
-companies and households.
+companies and people.
 
 You set deposit rates and lending spreads, decide who gets credit, manage
 liquidity against the Bank of England, and trade and issue bonds. The economy
@@ -25,12 +25,12 @@ node scripts/calibrate.js score  # how balanced is the economy right now?
 
 | Area | What works today |
 | --- | --- |
-| **Accounting** | Full double-entry ledger. Every entity — your bank, each firm, each household pool, the state, the Bank of England — has real books that balance. |
+| **Accounting** | Full double-entry ledger. Every entity — your bank, each firm, each pool of people, the state, the Bank of England — has real books that balance. |
 | **Your bank** | Loans (amortising and bullet), instant-access and term deposits, gilts and corporate bonds, central bank funding, a credit policy you set. |
-| **Companies** | Production, hiring and firing, pricing, stock, investment, borrowing, distress and insolvency with asset recoveries. |
-| **Households** | Wages, consumption out of smoothed income and savings, deposits, mortgages held elsewhere. |
+| **Companies** | Production, hiring and firing, pricing against cost, stock, investment, borrowing, distress and insolvency with asset recoveries. They differ in how well they are run, and settle pay on their own month of the year rather than all at once. |
+| **People** | Wages that reflect how good they are at the work, consumption budgeted against savings, deposits, mortgages held elsewhere. They are born, grow up, work, retire and die, and the birth rate answers to prosperity. |
 | **Markets** | A goods market that clears on price, a gilt curve, credit spreads, an interbank rate. |
-| **Labour** | A supply constraint on hiring, and pay that follows prices and labour-market tightness with downward nominal rigidity. |
+| **Labour** | A supply constraint on hiring from the working-age population, and pay that follows prices and labour-market tightness with downward nominal rigidity. |
 | **Policy** | A Monetary Policy Committee setting Bank Rate off inflation and the output gap; a state that taxes and spends. |
 | **Regulation** | CET1, risk-weighted assets, capital and leverage ratios, LCR, FSCS-covered deposits — computed and reported, not yet enforced. |
 
@@ -74,7 +74,7 @@ produced the thing it cares about.
 ## Level of detail: the economy is only as detailed as it needs to be
 
 Most of the economy is *latent*. Thousands of firms and hundreds of thousands of
-households live inside **cohorts**: a count, a set of distribution parameters,
+people live inside **cohorts**: a count, a set of distribution parameters,
 and one aggregate balance sheet.
 
 The moment something deals with you — applies for a loan, opens an account — it
@@ -98,7 +98,7 @@ exactly where this pattern usually goes wrong.
          every penny accounted for in both directions
 ```
 
-Every economic system works through `FirmView` / `HouseholdView`, so production,
+Every economic system works through `FirmView` / `PersonView`, so production,
 pricing and hiring have exactly one implementation, not one per detail level.
 
 ## Layout
@@ -163,25 +163,41 @@ which ones actually move the score, and searches over the handful that do. See
 `docs/CALIBRATION.md`. Every tuning knob lives in `SimConfig`; if you need a
 magic number inside a system, put it there instead, or the sweep cannot see it.
 
-Known rough edges:
+Known rough edges, measured over 24 seeds and ten simulated years — the
+baseline scores 67.8, and these are what it is made of:
 
-- **Too many firms fail** — 3.76% a year among the firms simulated individually,
-  against a 0.7% target. Now the largest item on the scorecard.
-- **Inflation is volatile** (~7.6% standard deviation). Part of this is
-  structural: the MPC reacts to year-on-year inflation, which lags the cycle
-  badly, so no parameter setting removes it.
-- **The bank is too profitable** — 43% return on equity against a 10% target,
-  which is what happens when credit losses are near zero.
-- **No firm or household demography.** Firms fail but none are ever created, so
-  the population falls about 0.7% a year with nothing offsetting it. Household
-  numbers never change at all. Latent firms inside cohorts cannot fail, which
-  is why the insolvency rate is measured against the at-risk population rather
-  than the whole economy.
-- **All firms behave identically.** They differ in size, sector and outcome, but
-  every one of them runs the same decision rules with the same parameters.
-- **Throughput** is ~104 ticks/second with 650 resolved firms, so a simulated
-  year takes about 3.5 seconds. Fine for play; a full calibration sweep is
-  still tens of minutes.
+- **Too many firms fail** — 3.81% a year among the firms simulated
+  individually, against a 0.7% target. At 40.5 of the 67.8 it is 60% of the
+  whole scorecard, and *no parameter that describes it moves it*:
+  `lossGivenDefault`, `liquidationHaircut`, `liquidationVariance`,
+  `liquidationCyclicality` and `workoutHaircutFactor` all register no
+  measurable effect across 24 seeds. Firms fail into a population nothing
+  replenishes, so the answer is firm demography rather than credit policy.
+- **No firm demography.** Firms fail but none are ever created, so the
+  population falls about 0.7% a year with nothing offsetting it. `company.founded`
+  is declared as an event and never emitted. People, by contrast, now have
+  ages: they are born, grow up, work, retire and die, and the birth rate
+  answers to prosperity.
+- **Monetary policy barely works.** Bank Rate reaches investment spending, but
+  pinning it across a 900 basis point span moves inflation by a fraction of a
+  point. Restraining demand here changes output rather than prices. The
+  consumption channel is built and switched off for that reason. See
+  `docs/ROADMAP.md`.
+- **The bank is too profitable** — 23% return on equity against a 10% target,
+  which is what happens when credit losses are near zero (0.65% against 1%).
+- **The economy runs slightly hot** — 1.5% unemployment against a 4.5% target,
+  worth 7.9 of the score. Damping the cycle removed the busts and the labour
+  block has never been retuned against an economy without them; every figure in
+  it was fitted to a cycling one.
+- **Latent firms cannot fail**, which is why the insolvency rate is measured
+  against the at-risk population rather than the whole economy. See
+  "Watch the denominator" in `docs/CALIBRATION.md`.
+- **There is no regional labour market.** Firms hire against one economy-wide
+  slack figure, so a region's firms can take on more staff than that region has
+  people.
+- **Throughput** is ~335 ticks/second with 685 resolved firms, so a simulated
+  year takes about a second. A `standard` campaign is 1,208 runs in ~17 minutes
+  on 20 cores.
 - **Regulation is reported, not enforced.** Breaching capital raises an event
   and nothing else happens yet.
 - **The rest of the market is scenery.** Rival banks hold aggregate books and

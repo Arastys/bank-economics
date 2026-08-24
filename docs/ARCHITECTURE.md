@@ -23,7 +23,7 @@ slots in without renumbering.
 | 0 | *(commands)* | Player actions, applied by the engine itself |
 | 100 | `policy.monetary` | MPC sets Bank Rate from inflation and the output gap |
 | 200 | `markets.rates` | Yield curve, credit spreads, bond prices |
-| 300 | `economy.production` | Firms produce; wages paid to households |
+| 300 | `economy.production` | Firms produce; jobs are filled; wages paid to people |
 | 350 | `economy.goodsMarket` | Demand meets output; prices move |
 | 400 | `firms.decisions` | Monthly pay, hiring against labour supply, funding needs |
 | 450 | `credit.demand` | Applications arrive; latent firms are materialised |
@@ -33,6 +33,7 @@ slots in without renumbering.
 | 800 | `bank.treasury` | Reserve management against the central bank |
 | 850 | `lod.sweep` | Fold idle entities away; prune dead records |
 | 900 | `accounting.periods` | Operating costs and depreciation |
+| 920 | `people.demography` | Births, ageing between life stages, retirement, death |
 | 950 | `metrics.record` | Monthly time series and prudential ratios |
 | 980 | `accounting.yearEnd` | Tax, public spending, the annual close |
 

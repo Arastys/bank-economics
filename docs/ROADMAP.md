@@ -4,18 +4,31 @@ What was deliberately left out of the starting framework, and where each piece
 slots in. Nothing here should require reworking what already exists — that was
 the point of the structure.
 
-## Balancing first
+## What is actually in the way
 
-Before new features, the economy needs tuning. Everything that drives it is in
-`DEFAULT_CONFIG` (`src/world/state.ts`) and `src/scenarios/uk2025.ts`.
+The baseline scores 67.8 over 24 seeds at ten years. Three things are it:
 
-- Damp the business cycle: the amplitude is larger than it should be, driven by
-  the interaction of the price adjustment rule, the hiring rule and the lagged
-  year-on-year inflation measure the MPC reacts to.
-- Bring impairments down to low single digits of the book per year.
-- Remove the first-year deflationary drift.
+- **Corporate insolvency, 40.5 — 60% of the total.** 3.81% of at-risk firms
+  fail a year against a 0.7% target, and *every parameter describing recovery
+  and loss moves the score by no measurable amount*. Firms fail into a
+  population nothing replenishes. This wants firm demography, not tuning, which
+  is why it has been promoted out of "medium term" below.
+- **Unemployment, 7.9 — and it is too low, not too high.** 1.52% against a 4.5%
+  target. Damping the business cycle removed the busts and the labour block has
+  never been retuned against an economy without them; every figure in it was
+  fitted to a cycling one. This one *is* tuning, and `neutralTightness` is the
+  dominant knob.
+- **Inflation level, 8.4.** 4.03% against 2%. Monetary policy cannot help:
+  restraining demand here moves output rather than prices. See below.
 
-`npm run sim -- 1095` and the probe pattern in the tests are the tools for this.
+The business cycle is no longer on this list. Its amplitude was mostly one
+defect — every firm settling pay on the same tick — and volatility has gone
+from 15.8 to 2.6.
+
+Everything that drives the economy is in `DEFAULT_CONFIG`
+(`src/world/state.ts`) and `src/scenarios/uk2025.ts`. `npm run sim -- 1095`,
+`node scripts/campaign.js standard` and the probe pattern in the tests are the
+tools.
 
 ## Near term
 
@@ -24,9 +37,17 @@ breach already raises `bank.breachedLimit`. Give it consequences: a supervisory
 letter, a dividend block, forced deleveraging, and ultimately resolution with
 the FSCS paying out covered depositors. One new system, no model changes.
 
+**Firm demography.** The single largest thing wrong with the model. Firms fail
+and none are ever born, so the population only falls and failures accumulate
+into a shrinking denominator: the insolvency penalty grows from 39 at three
+years to 58 at twenty. `company.founded` is already declared as an event and
+never emitted, and `promoteMember` already builds a firm out of a pool, so the
+machinery is mostly there. It would also make `cohortDispersion` usable, since
+permanent competitive losers could finally be replaced.
+
 **Retail lending.** Mortgages and consumer credit as instrument types, plus
-household credit demand in `credit.demand`. Households already have credit
-grades, PDs and deposit relationships; only the products are missing.
+personal credit demand in `credit.demand`. People already have credit grades,
+PDs and deposit relationships; only the products are missing.
 
 **Rival banks that actually compete.** `bank:market` currently holds an
 aggregate book and does nothing. Give it the same `BankPolicy` and drive it
@@ -49,8 +70,10 @@ limits, an arrears and forbearance workflow, a treasury desk for managing the
 maturity ladder, and a proper objectives-and-scoring layer.
 
 **Simulation depth**: a labour market with search and matching rather than a
-proportional constraint; firm entry as well as exit; regional differentiation
-with real effects; supply chains between sectors.
+proportional constraint, and a *regional* one — firms currently hire against
+one economy-wide slack figure, so a region's firms can take on more staff than
+that region has people; regional differentiation with real effects; supply
+chains between sectors.
 
 **Shocks and scenarios**: a scripted event layer — a pandemic, an energy price
 spike, a mini-budget — expressed as scenario data plus a system that applies
@@ -101,22 +124,22 @@ nothing defending the margin. Firms now price against unit cost
 (`targetMarkup`, `costAnchorWeight`), with the trading signal deciding how fast
 they move rather than deciding the price outright.
 
-**Households saved for ever.** They spent a fixed share of income and ran
+**People saved for ever.** They spent a fixed share of income and ran
 savings down at a flat daily rate. Those two flows do not balance: with a 95%
 propensity and a 0.01% daily drawdown, the savings stock has to reach five
 hundred days of income before saving stops. Until then the firm sector handed
 over more cash than it took back, every day. Firm cash fell from £2.9bn to
-£90m over eight years while household deposits rose from £4.8bn to £8.2bn —
+£90m over eight years while their deposits rose from £4.8bn to £8.2bn —
 the economy did not lose money, it just piled it where nothing spent it.
 
 Nothing in a three-year run showed this. The stock takes a decade to bite, and
 the margin defect was masking it: a firm sector selling below cost was handing
-its losses back to households as purchasing power, which is a leak in the
+its losses back to people as purchasing power, which is a leak in the
 opposite direction. Fixing the margin made the saving leak visible, and
 unemployment briefly got *worse* — 19% rather than 28% — which is how the
 second defect was found.
 
-Households now save towards a buffer of `savingsBufferDays` days of income and
+People now save towards a buffer of `savingsBufferDays` days of income and
 close the gap to it at `savingsAdjustment` a day, so the saving flow is zero
 once the buffer is full and negative above it.
 
@@ -136,7 +159,7 @@ particular hole cannot reopen unnoticed.
 
 Bank Rate used to reach loan pricing, reserve remuneration and the yield curve
 and nothing else. No spending decision read it: firms borrowed to cover payroll
-regardless of cost, reinvested a fixed share of takings, and households saved
+regardless of cost, reinvested a fixed share of takings, and people saved
 towards a fixed buffer. Pinning the rate across a 900 basis point span moved
 inflation by 0.2 points, in the wrong direction — dearer credit raised firms'
 costs and the cost anchor passed them into prices, with nothing anywhere
@@ -191,12 +214,13 @@ to every firm on the same monthly tick, so one shock moved every wage in the
 economy at once. Firms now settle pay on their own month of the year against a
 running wage index, so twelve vintages coexist and a shock reaches the wage
 bill over a year. Paired across 24 seeds at ten years, inflation volatility
-falls from 15.8 to 4.4.
+fell from 15.8 to 4.4, and the heterogeneity added since has taken it to 2.6.
 
 What that left behind is a **labour market that now runs far too hot**.
 Damping the cycle removed the busts, and average unemployment fell to 1.63%
-against a 4.5% target — worth 6.5 of penalty where it used to be worth 0.8, so
-most of the volatility gain is currently spent on it. That is a calibration
+against a 4.5% target, and 1.52% once the rest of today's work landed — worth
+7.9 of penalty where it used to be worth 0.8, so most of the volatility gain is
+currently spent on it. That is a calibration
 question rather than a defect in the mechanism, and `neutralTightness` is the
 obvious lever, but the labour block has never been tuned against a damped
 economy and every figure in it was fitted to a cycling one.
@@ -210,7 +234,7 @@ excursion, not a standing one.
 
 A first attempt built the consumption channel against the target buffer rather
 than the saving rate. That is a stock, not a flow: asking for a tenth more
-buffer asks households to withhold eighteen days of income at once and hand it
+buffer asks people to withhold eighteen days of income at once and hand it
 back as abruptly when rates fall. It gave the committee enormous apparent grip
 — inflation 10.2% at a pinned rate against 1.0% under the Taylor rule — by
 wrecking the economy to get it, at 21% unemployment. Worth remembering the next

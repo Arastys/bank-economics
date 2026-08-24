@@ -74,8 +74,8 @@ export const creditRiskSystem = defineSystem({
       });
     }
 
-    // Firms are born and die inside the pools too, which keeps the latent
-    // population from being a static backdrop.
+    // Firms die inside the pools too, so the latent population is not a static
+    // backdrop. They are not born there, which is the problem below.
     for (const cohort of cohorts(world)) {
       if (cohort.memberKind !== 'company' || cohort.count <= 0) continue;
       const churn = cohort.count * COHORT_CHURN * (1 - Math.min(0.8, world.economy.outputGap * 2));

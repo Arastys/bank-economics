@@ -142,9 +142,13 @@ export const productionSystem = defineSystem({
     world.economy.outputUnits = outputUnits;
     world.economy.employed = employed;
     // Working age only. Children and the retired are in the population and in
-    // the queue at the shops, but they are not labour supply, and counting
-    // them as such was the whole reason `labourParticipation` had to sit at a
-    // suspiciously round 0.96.
+    // the queue at the shops, but they are not labour supply.
+    //
+    // `labourParticipation` now means what it says -- the share of working-age
+    // people in the labour market -- rather than doubling as a fudge for the
+    // whole population. It has not been retuned since, and 96% of working age
+    // is a long way above the United Kingdom's ~79%, which is part of why the
+    // economy runs at 1.5% unemployment against a 4.5% target.
     world.economy.labourForce = people.reduce((total, h) => total + h.workingAge, 0);
     // Measured against the people actually in the labour market, not the whole
     // population, so a fully employed economy reads as zero rather than as the
