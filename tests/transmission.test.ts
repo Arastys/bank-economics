@@ -101,18 +101,23 @@ describe('the policy rate reaches the economy', () => {
   }, 120_000);
 
   /**
-   * Bank Rate still reaches the books through interest paid and earned, so
-   * switching the demand channel off does not make two rate regimes identical
-   * -- it makes them nearly so. That residue is what the whole economy used to
-   * respond to, and it is worth seeing how small it is.
+   * Switching the channel off must leave the appetite flat whatever the rate.
+   *
+   * This asserts it where the mechanism lives rather than out at the far end
+   * of a three-year run: Bank Rate also reaches firms' cash through interest
+   * paid and earned, and investment is capped by cash on hand, so two rate
+   * regimes are never identical in aggregate however the demand channel is
+   * set. An earlier version of this test compared those aggregates and was
+   * measuring that residue rather than the channel.
    */
-  it('leaves only a rounding of that difference when the channel is off', () => {
-    const spread = (o: object) =>
-      Math.abs(capacityBuilt({ maxBankRate: 0.001, ...o }) - capacityBuilt({ neutralRealRate: -0.04, ...o }));
-    const off = spread({ investmentRateSensitivity: 0 });
-    const on = spread({});
-    expect(off).toBeLessThan(on / 5);
-  }, 240_000);
+  it('leaves investment appetite flat when the channel is switched off', () => {
+    const off = { ...DEFAULT_CONFIG, investmentRateSensitivity: 0 };
+    for (const rate of [0, 0.02, 0.08, 0.2]) {
+      const world = worldAtRate(rate);
+      world.config = off;
+      expect(investmentAppetite(world)).toBe(1);
+    }
+  });
 });
 
 /** Fixed assets the firm sector has accumulated after three years. */

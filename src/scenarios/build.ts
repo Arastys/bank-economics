@@ -4,7 +4,7 @@ import { identityRng, logNormal, makeRng, randInt } from '../core/rng.js';
 import { addYears, fromDate, addMonths } from '../core/time.js';
 import { AC, depositCode } from '../ledger/accounts.js';
 import { createLedger, openWithCapital, post, credit, debit } from '../ledger/ledger.js';
-import { drawQuality } from '../agents/lod.js';
+import { drawPayReviewMonth, drawQuality } from '../agents/lod.js';
 import { goingRateFinancials } from '../agents/credit.js';
 import { createMetrics } from '../metrics/recorder.js';
 import { BOND_FIXED } from '../instruments/bond.js';
@@ -75,6 +75,8 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
       employed: 0,
       confidence: 1,
       priceIndexHistory: [],
+      wageIndex: 1,
+      wageIndexHistory: [],
     },
     applications: {},
     metrics: createMetrics(),
@@ -218,6 +220,7 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
     const sizeFactor = Math.min(6, logNormal(idRng, -(cohortSpec.sizeSigma ** 2) / 2, cohortSpec.sizeSigma));
     const employees = Math.max(1, Math.round(cohortSpec.meanEmployees * sizeFactor));
     const quality = drawQuality(world, identity);
+    const payReviewMonth = drawPayReviewMonth(world, identity);
 
     const company: Company = {
       id: nextId(ids, 'cmp'),
@@ -234,6 +237,8 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
       employees,
       quality,
       productivity: cohortSpec.meanProductivity * quality,
+      payReviewMonth,
+      wageIndexAtReview: 1,
       wagePerEmployee: cohortSpec.meanWagePerEmployee,
       price: cohortSpec.meanPrice,
       inventoryUnits:

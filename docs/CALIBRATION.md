@@ -236,12 +236,19 @@ before anyone trusts a three-year number either.
 At the shipped defaults, twenty-four seeds, ten years — the first campaign run
 at a horizon outside the settling excursion:
 
-| component | penalty | share |
-| --- | ---: | ---: |
-| corporate insolvency | 41.7 | 60% |
-| inflation volatility | 15.8 | 23% |
-| inflation level | 6.3 | 9% |
-| everything else | 5.7 | 8% |
+| component | penalty | share | after staggered pay |
+| --- | ---: | ---: | ---: |
+| corporate insolvency | 41.7 | 60% | 40.8 |
+| inflation volatility | 15.8 | 23% | **4.4** |
+| inflation level | 6.3 | 9% | 7.0 |
+| unemployment | 0.8 | 1% | **7.3** |
+| everything else | 4.9 | 7% | 7.7 |
+| **total** | **69.5** | | **67.2** |
+
+The fourth column is the same seeds after firms stopped settling pay on the
+same tick. The volatility it targeted fell by 72%; the economy then ran too hot
+without its busts, and unemployment took back most of the gain. See
+`docs/ROADMAP.md`.
 
 Two things follow, and both redirect effort.
 

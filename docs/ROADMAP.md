@@ -185,11 +185,21 @@ is not the inflation engine either. And at 24 seeds over ten years the baseline
 score of 69.5 is 41.7 insolvency, **15.8 inflation volatility** and only 6.3
 inflation level: the swing is two and a half times the miss.
 
-The prime suspect is that wage setting is perfectly synchronised.
-`src/systems/firms.ts` computes one `wageGrowth` from one economy-wide
-tightness number and applies it to every firm on the same monthly tick. Real
-wage setting is staggered across the year, which is the standard damper for
-exactly this pathology, and nothing here staggers anything.
+The cause was that wage setting was perfectly synchronised. `firms.ts`
+computed one `wageGrowth` from one economy-wide tightness number and applied it
+to every firm on the same monthly tick, so one shock moved every wage in the
+economy at once. Firms now settle pay on their own month of the year against a
+running wage index, so twelve vintages coexist and a shock reaches the wage
+bill over a year. Paired across 24 seeds at ten years, inflation volatility
+falls from 15.8 to 4.4.
+
+What that left behind is a **labour market that now runs far too hot**.
+Damping the cycle removed the busts, and average unemployment fell to 1.63%
+against a 4.5% target — worth 6.5 of penalty where it used to be worth 0.8, so
+most of the volatility gain is currently spent on it. That is a calibration
+question rather than a defect in the mechanism, and `neutralTightness` is the
+obvious lever, but the labour block has never been tuned against a damped
+economy and every figure in it was fitted to a cycling one.
 
 The consumption channel therefore ships switched off — built, tested and swept,
 worth turning on once the cycle is damped, because until then extra demand

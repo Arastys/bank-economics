@@ -82,6 +82,18 @@ export interface Company extends EntityBase {
   productivity: number;
   /** Daily wage bill per employee. */
   wagePerEmployee: Money;
+  /**
+   * The month of the year this firm settles pay, 1-12, drawn at birth.
+   *
+   * Real pay rounds are staggered across the calendar. Everyone here used to
+   * settle on the same monthly tick with the same number, which is a
+   * synchronisation machine: one shock moved every wage in the economy at
+   * once, and the boom-bust cycle that produced is most of the model's
+   * inflation volatility.
+   */
+  payReviewMonth: number;
+  /** `economy.wageIndex` as it stood when this firm last settled pay. */
+  wageIndexAtReview: number;
   /** Unit price the firm currently charges. */
   price: Money;
   /** Finished goods on hand, in units. */

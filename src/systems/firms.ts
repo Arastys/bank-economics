@@ -1,5 +1,5 @@
 import { ZERO, add, scale, sub, type Money } from '../core/money.js';
-import { isMonthEnd } from '../core/time.js';
+import { isMonthEnd, toDate } from '../core/time.js';
 import { AC } from '../ledger/accounts.js';
 import { naturalBalance } from '../ledger/ledger.js';
 import { refreshFinancials } from '../agents/credit.js';
@@ -33,20 +33,24 @@ export const firmDecisionSystem = defineSystem({
     const tightness = workforce > 0 ? employed / workforce : 1;
     const slack = Math.max(0, workforce - employed);
 
-    // Pay follows prices and the state of the labour market.
+    // Pay follows prices and the state of the labour market. The signal is
+    // economy-wide and monthly, as it always was; what changed is that firms
+    // no longer all act on it at the same moment.
     const wageGrowth = clamp(
       config.wageIndexation * monthlyInflation(world) +
         config.wageTightnessResponse * (tightness - config.neutralTightness),
       -config.maxMonthlyWageCut,
       config.maxMonthlyWageRise,
     );
+    advanceWageIndex(world, wageGrowth);
+    const month = toDate(ctx.tick).month;
 
     let wantedHires = 0;
     const hiring: { firm: FirmView; wanted: number }[] = [];
 
     for (const firm of firms) {
       if (firm.employees <= 0) continue;
-      firm.wagePerEmployee = Math.max(1, Math.round(firm.wagePerEmployee * (1 + wageGrowth))) as Money;
+      settlePay(world, firm, month);
 
       // Days of stock is measured against sales, not output: dividing by the
       // production a firm is in the middle of cutting makes the signal chase
@@ -111,6 +115,61 @@ export const firmDecisionSystem = defineSystem({
 export function headcountStep(firm: FirmView, rate: number): number {
   const exact = firm.employees * rate;
   return firm.isCohort ? exact : Math.max(1, Math.round(exact));
+}
+
+/** How many monthly vintages of pay coexist in the economy at any moment. */
+const PAY_VINTAGES = 12;
+
+/**
+ * Accumulate the economy-wide pay signal, and remember the last year of it.
+ *
+ * The index is what a wage settled today would be worth relative to one
+ * settled at the start. Firms draw on it when their own review comes round.
+ */
+export function advanceWageIndex(world: WorldState, monthlyGrowth: number): void {
+  const { economy } = world;
+  economy.wageIndex *= 1 + monthlyGrowth;
+  economy.wageIndexHistory.push(economy.wageIndex);
+  while (economy.wageIndexHistory.length > PAY_VINTAGES) economy.wageIndexHistory.shift();
+}
+
+/**
+ * Settle this firm's pay, if this is the month it settles pay.
+ *
+ * A resolved firm is one business and moves in one step: it applies all the
+ * growth since its own last review and then holds that wage for a year.
+ *
+ * A cohort is thousands of businesses whose review months are spread across
+ * the calendar, so its average wage is the average of twelve vintages. That is
+ * not the same as the current index and must not be modelled as though it
+ * were: a pool that moved in one step every year would be a bigger
+ * synchronisation than the one this replaces, because the pools hold most of
+ * the employment. It tracks the trailing mean instead, which is exactly what a
+ * uniformly staggered population averages to.
+ */
+export function settlePay(world: WorldState, firm: FirmView, month: number): void {
+  const history = world.economy.wageIndexHistory;
+  if (firm.isCohort) {
+    if (history.length < 2) return;
+    const now = mean(history);
+    const before = mean(history.slice(0, -1));
+    if (before <= 0) return;
+    firm.wagePerEmployee = Math.max(1, Math.round(firm.wagePerEmployee * (now / before))) as Money;
+    return;
+  }
+  if (firm.company?.payReviewMonth !== month) return;
+  const since = firm.company.wageIndexAtReview;
+  if (since > 0) {
+    firm.wagePerEmployee = Math.max(
+      1,
+      Math.round(firm.wagePerEmployee * (world.economy.wageIndex / since)),
+    ) as Money;
+  }
+  firm.company.wageIndexAtReview = world.economy.wageIndex;
+}
+
+function mean(xs: number[]): number {
+  return xs.length === 0 ? 0 : xs.reduce((a, b) => a + b, 0) / xs.length;
 }
 
 /** Price change over the last month, from the daily index history. */

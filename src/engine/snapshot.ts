@@ -59,6 +59,27 @@ migrations.set(2, (world) => {
   return world;
 });
 
+/**
+ * Pay used to be re-set for every firm on the same monthly tick. Firms now
+ * settle on their own month against a running wage index. An old save starts
+ * that index at 1 with no history, and every firm is given a review month --
+ * spread by id rather than drawn, so a loaded save does not put the whole
+ * economy on the same review month and rebuild the synchronisation this
+ * removes.
+ */
+migrations.set(3, (world) => {
+  const economy = world.economy as unknown as Record<string, unknown>;
+  economy.wageIndex = 1;
+  economy.wageIndexHistory = [];
+  let n = 0;
+  for (const entity of Object.values(world.entities)) {
+    if (entity.kind !== 'company') continue;
+    entity.payReviewMonth = (n++ % 12) + 1;
+    entity.wageIndexAtReview = 1;
+  }
+  return world;
+});
+
 export function load(json: string): WorldState {
   const snapshot = JSON.parse(json) as Snapshot;
   if (typeof snapshot?.version !== 'number' || !snapshot.world) {

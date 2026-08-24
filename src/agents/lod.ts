@@ -129,6 +129,7 @@ function buildCompany(world: WorldState, cohort: Cohort, identity: string, sizeF
   // Drawn from the firm's own identity, so the same latent member is always
   // the same quality of business however often it is materialised.
   const quality = drawQuality(world, identity);
+  const payReviewMonth = drawPayReviewMonth(world, identity);
   return {
     id,
     kind: 'company',
@@ -144,6 +145,8 @@ function buildCompany(world: WorldState, cohort: Cohort, identity: string, sizeF
     employees: Math.max(1, Math.round(archetype.meanEmployees * sizeFactor)),
     quality,
     productivity: archetype.meanProductivity * quality,
+    payReviewMonth,
+    wageIndexAtReview: world.economy.wageIndex,
     wagePerEmployee: archetype.meanWagePerEmployee,
     price: archetype.meanPrice,
     inventoryUnits: 0,
@@ -368,6 +371,16 @@ function countResolved(world: WorldState): number {
  * cohort does not quietly make the economy more or less productive than the
  * pool it drew them from.
  */
+/**
+ * The month a firm settles pay, spread evenly across the calendar.
+ *
+ * Seeded off identity like quality, so a firm keeps the same review month
+ * however often it is materialised out of a pool.
+ */
+export function drawPayReviewMonth(world: WorldState, identity: string): number {
+  return 1 + Math.floor(identityRng(world.seed, `payReview:${identity}`)() * 12);
+}
+
 export function drawQuality(world: WorldState, identity: string): number {
   const spread = world.config.firmQualitySpread;
   if (spread <= 0) return 1;

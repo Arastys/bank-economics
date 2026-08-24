@@ -172,6 +172,8 @@ describe('parameter definitions', () => {
     const allowed = new Set([
       'BUSINESS_DAY_SHARE',
       'PRICE_HISTORY',
+      // Months in a year, not a knob: it is tied to payReviewMonth being 1-12.
+      'PAY_VINTAGES',
       'REVIEW_CYCLE',
       'SWEEP_INTERVAL',
       'COHORT_CHURN',

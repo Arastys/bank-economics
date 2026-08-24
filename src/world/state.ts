@@ -184,6 +184,17 @@ export interface EconomyState {
   confidence: number;
   /** Rolling record used to compute year-on-year figures. */
   priceIndexHistory: number[];
+  /**
+   * What a wage set today would be, relative to one set at the start.
+   *
+   * Pay is not re-set for everyone every month. The economy-wide signal
+   * accumulates here, and each firm applies the growth since its own last
+   * review when its review month comes round -- so at any moment the wage bill
+   * is a mix of twelve vintages rather than one number everybody just moved to.
+   */
+  wageIndex: number;
+  /** The last twelve monthly values of `wageIndex`, oldest first. */
+  wageIndexHistory: number[];
 }
 
 /** Sampled time series for charts and for balancing the game. */
@@ -245,7 +256,7 @@ export interface WorldState {
   config: SimConfig;
 }
 
-export const WORLD_VERSION = 3;
+export const WORLD_VERSION = 4;
 
 export const DEFAULT_CONFIG: SimConfig = {
   applicationValidityDays: 14,
