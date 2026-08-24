@@ -75,6 +75,11 @@ export class FirmView {
     else this.target.wagePerEmployee = v;
   }
 
+  /** How well this firm is run, as a multiple of its sector average. */
+  get quality(): number {
+    return this.target.kind === 'cohort' ? (this.target.pool.quality ?? 1) : this.target.quality;
+  }
+
   get price(): Money {
     return this.target.kind === 'cohort'
       ? ((this.target.pool.price ?? this.archetype.meanPrice) as Money)

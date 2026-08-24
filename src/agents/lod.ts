@@ -126,6 +126,9 @@ function attachLegacyDebt(ctx: SimContext, cohort: Cohort, entityId: EntityId): 
 function buildCompany(world: WorldState, cohort: Cohort, identity: string, sizeFactor: number): Company {
   const archetype = cohort.archetype as CompanyArchetype;
   const id = nextId(world.ids, 'cmp');
+  // Drawn from the firm's own identity, so the same latent member is always
+  // the same quality of business however often it is materialised.
+  const quality = drawQuality(world, identity);
   return {
     id,
     kind: 'company',
@@ -139,7 +142,8 @@ function buildCompany(world: WorldState, cohort: Cohort, identity: string, sizeF
     creditGrade: archetype.creditGrade,
     status: 'active',
     employees: Math.max(1, Math.round(archetype.meanEmployees * sizeFactor)),
-    productivity: archetype.meanProductivity,
+    quality,
+    productivity: archetype.meanProductivity * quality,
     wagePerEmployee: archetype.meanWagePerEmployee,
     price: archetype.meanPrice,
     inventoryUnits: 0,
@@ -149,7 +153,7 @@ function buildCompany(world: WorldState, cohort: Cohort, identity: string, sizeF
     pdAnnual: 0.02,
     financials: goingRateFinancials({
       employees: Math.max(1, Math.round(archetype.meanEmployees * sizeFactor)),
-      productivity: archetype.meanProductivity,
+      productivity: archetype.meanProductivity * quality,
       price: archetype.meanPrice,
       wagePerEmployee: archetype.meanWagePerEmployee,
     }),
@@ -355,6 +359,20 @@ function countResolved(world: WorldState): number {
     if (e.kind === 'company' || e.kind === 'household') n++;
   }
   return n;
+}
+
+/**
+ * A firm's quality, as a multiple of its sector average.
+ *
+ * Log-normal with a mean of exactly one, so materialising members out of a
+ * cohort does not quietly make the economy more or less productive than the
+ * pool it drew them from.
+ */
+export function drawQuality(world: WorldState, identity: string): number {
+  const spread = world.config.firmQualitySpread;
+  if (spread <= 0) return 1;
+  const rng = identityRng(world.seed, `quality:${identity}`);
+  return Math.max(0.3, Math.min(2.5, logNormal(rng, -(spread * spread) / 2, spread)));
 }
 
 const COMPANY_SUFFIX = ['Ltd', 'Group', 'Holdings', 'plc', '& Co', 'Services'];

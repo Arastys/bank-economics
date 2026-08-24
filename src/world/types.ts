@@ -68,7 +68,17 @@ export interface Company extends EntityBase {
   status: 'active' | 'distressed' | 'defaulted';
 
   employees: number;
-  /** Units of output per employee per business day. */
+  /**
+   * How well the firm is run, as a multiple of the average for its sector.
+   *
+   * Drawn once at birth and fixed thereafter. It is baked into productivity,
+   * so a better-run firm gets more out of the same people, has a lower unit
+   * cost, and earns a better margin at the same market price -- which then
+   * shows up in its earnings, its credit grade and whether it survives a bad
+   * year. Nothing else needs to know about it for it to matter.
+   */
+  quality: number;
+  /** Units of output per employee per business day, quality already included. */
   productivity: number;
   /** Daily wage bill per employee. */
   wagePerEmployee: Money;

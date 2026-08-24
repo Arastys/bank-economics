@@ -32,6 +32,11 @@ export interface SimConfig {
   priceAdjustment: number;
   /** How fast firms adjust headcount. */
   hiringAdjustment: number;
+  /**
+   * How much firms differ in how well they are run, as a log-normal spread
+   * around the sector average. Zero makes every firm identical.
+   */
+  firmQualitySpread: number;
   /** Sell-through firms aim for. Above it they raise prices, below they cut. */
   targetSellThrough: number;
   /** Days of stock a firm is comfortable holding. */
@@ -202,6 +207,7 @@ export const DEFAULT_CONFIG: SimConfig = {
   neutralRealRate: 0.005,
   priceAdjustment: 0.006,
   hiringAdjustment: 0.02,
+  firmQualitySpread: 0.18,
   targetSellThrough: 0.95,
   targetStockDays: 8,
   demandPriceWeight: 0.7,
