@@ -69,6 +69,17 @@ These are the ones the boundaries were built for.
 - **A different front end.** The engine has no DOM dependency; the dashboard is
   the only thing that would be replaced.
 
+## Known open problem
+
+Splitting a cohort into several identical cohorts changes aggregate outcomes.
+It should not. `cohortSubdivision` is off by default because of it, and the
+granularity it would buy is cheap and worth having once the cause is found.
+Headcount rounding was one contributor and is fixed; something else remains.
+Start by diffing aggregate employment, stock and price between a subdivided and
+an unsubdivided run over the first ninety days — the divergence is gradual and
+compounding rather than a step, which points at another per-cohort quantity
+being treated as though the cohort were a single firm.
+
 ## Things to be careful about
 
 - **Never assign a balance directly.** Everything goes through `post()`.

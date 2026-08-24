@@ -127,8 +127,10 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
 
   // --- the latent economy --------------------------------------------------
 
-  const companyCohorts: Cohort[] = spec.companyCohorts.map((cohortSpec, index) => {
-    const id = `coh:cmp:${index}`;
+  const subdivided = subdivide(spec);
+  const specByCohortId = new Map(subdivided.map(({ spec: cohortSpec, id }) => [id, cohortSpec]));
+
+  const companyCohorts: Cohort[] = subdivided.map(({ spec: cohortSpec, id }) => {
     return addEntity(world, {
       id,
       kind: 'cohort',
@@ -205,9 +207,9 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
   const rng = makeRng(spec.seed);
   const customers: { company: Company; loan: Money; rate: number; termMonths: number }[] = [];
   for (let i = 0; i < spec.existingCorporateCustomers; i++) {
-    const cohortIndex = randInt(rng, 0, spec.companyCohorts.length - 1);
-    const cohortSpec = spec.companyCohorts[cohortIndex]!;
+    const cohortIndex = randInt(rng, 0, companyCohorts.length - 1);
     const cohort = companyCohorts[cohortIndex]!;
+    const cohortSpec = specByCohortId.get(cohort.id)!;
     if (cohort.count <= 1) continue;
 
     const identity = `${cohort.id}#${cohort.nextMemberIndex++}`;
@@ -269,8 +271,8 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
   let otherDeposits: Money = ZERO;
   let otherLoans: Money = ZERO;
 
-  spec.companyCohorts.forEach((cohortSpec, index) => {
-    const cohort = companyCohorts[index]!;
+  companyCohorts.forEach((cohort) => {
+    const cohortSpec = specByCohortId.get(cohort.id)!;
     if (cohort.count <= 0) return;
     const cash = scale(cohortSpec.cashPerFirm, cohort.count);
     const debt = scale(cohortSpec.debtPerFirm, cohort.count);
@@ -311,7 +313,7 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
 
   let playerCorporateLoans: Money = ZERO;
   for (const customer of customers) {
-    const cohortSpec = spec.companyCohorts.find((c) => c.sector === customer.company.sector)!;
+    const cohortSpec = specByCohortId.get(customer.company.originCohortId!)!;
     const sizeRatio = customer.company.employees / Math.max(1, cohortSpec.meanEmployees);
     const cash = round(cohortSpec.cashPerFirm * sizeRatio);
     openWithCapital(
@@ -519,6 +521,83 @@ function seedGilts(world: WorldState, spec: ScenarioSpec, holderId: string, tota
     });
     world.markets.bondPrices[id] = 1;
   });
+}
+
+/**
+ * Split each company specification into several cohorts with slightly
+ * different economics.
+ *
+ * Every member stays latent, so the per-tick cost is one extra view per cohort
+ * rather than one per firm -- but the latent economy stops behaving like a
+ * handful of identical giants and starts having a spread of prices, output per
+ * head and pay for the goods market to sort between.
+ */
+function subdivide(spec: ScenarioSpec): { spec: CompanyCohortSpec; id: string }[] {
+  const requested = Math.max(1, Math.round(spec.cohortSubdivision ?? 1));
+  const out: { spec: CompanyCohortSpec; id: string }[] = [];
+
+  spec.companyCohorts.forEach((cohortSpec, index) => {
+    // Never split a specification so far that its slices stop being pools. A
+    // cohort of three firms costs the same as a cohort of three thousand and
+    // represents its members far worse, so the small specifications -- the
+    // medium-sized manufacturers, the care homes -- are split less.
+    const splits = Math.max(1, Math.min(requested, Math.floor(cohortSpec.count / MIN_COHORT_MEMBERS)));
+    const counts = allocateCount(cohortSpec.count, splits);
+    counts.forEach((count, k) => {
+      if (count <= 0) return;
+      const id = splits === 1 ? `coh:cmp:${index}` : `coh:cmp:${index}:${k}`;
+      if (splits === 1) {
+        out.push({ spec: cohortSpec, id });
+        return;
+      }
+      // Deterministic in (seed, cohort, slice), so a scenario always builds
+      // the same economy however many times it is loaded.
+      const rng = identityRng(spec.seed, `subdivide:${index}:${k}`);
+      const jitter = (sigma: number): number => logNormal(rng, -(sigma * sigma) / 2, sigma);
+
+      // Productivity and pay vary independently: those are real differences
+      // between firms. Price is then *derived* from them, so a cohort that
+      // pays more or produces less charges more accordingly and its margin
+      // stays intact. Jittering price independently instead leaves some
+      // cohorts structurally unable to cover their wage bill at any volume,
+      // which is not variety, it is a broken economy.
+      const spread = spec.cohortDispersion ?? 0.05;
+      const productivityFactor = jitter(spread);
+      const wageFactor = jitter(spread * 0.9);
+      const marginFactor = jitter(spread * 0.45);
+
+      out.push({
+        id,
+        spec: {
+          ...cohortSpec,
+          count,
+          meanProductivity: Math.max(0.1, cohortSpec.meanProductivity * productivityFactor),
+          meanWagePerEmployee: Math.max(
+            1,
+            Math.round(cohortSpec.meanWagePerEmployee * wageFactor),
+          ) as Money,
+          meanPrice: Math.max(
+            1,
+            Math.round((cohortSpec.meanPrice * wageFactor * marginFactor) / productivityFactor),
+          ) as Money,
+          meanEmployees: Math.max(1, Math.round(cohortSpec.meanEmployees * jitter(spread * 1.6))),
+        },
+      });
+    });
+  });
+
+  return out;
+}
+
+/** Below this many members a cohort is not worth having as a pool. */
+const MIN_COHORT_MEMBERS = 40;
+
+/** Split a headcount into `parts` whole numbers that still sum to the original. */
+function allocateCount(total: number, parts: number): number[] {
+  const base = Math.floor(total / parts);
+  const counts = Array.from({ length: parts }, () => base);
+  for (let i = 0; i < total - base * parts; i++) counts[i] = (counts[i] ?? 0) + 1;
+  return counts;
 }
 
 /** The going daily rate of takings for a given headcount. */

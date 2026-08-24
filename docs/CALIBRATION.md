@@ -88,6 +88,42 @@ Those bands are guard rails, not a tuning lock — their job is to catch a chang
 that sends the model into a spiral, not to freeze the current numbers. Tighten
 them as the calibration settles.
 
+## Open question: cohort granularity is not behaviour-neutral
+
+`cohortSubdivision` splits each company specification into several cohorts.
+Members stay latent either way, so the per-tick cost is one extra view per
+cohort rather than one per firm — ten price-setters become ninety-two for
+almost nothing, and the latent economy stops behaving like a handful of
+identical giants.
+
+It is **off by default**, because it changes aggregate outcomes in a way it
+should not:
+
+| configuration | inflation | inflation volatility | unemployment |
+| --- | ---: | ---: | ---: |
+| 10 cohorts (default) | 2.39% | 6.79% | 4.0% |
+| 12x, identical slices | 7.23% | 5.38% | 3.2% |
+| 12x, small dispersion | 9.29% | 5.67% | 2.8% |
+
+The volatility improvement is real and worth having. The problem is the middle
+row: splitting a pool into twelve *identical* pools should be a no-op, and it
+moves inflation by five points. Something in the per-cohort logic does not
+scale with cohort size.
+
+One cause was found and fixed — headcount was being rounded to whole people per
+cohort, so twelve pools shed fewer staff than one pool of the same size. That
+was a genuine defect and improved the default calibration, but it did not close
+the gap. Something else remains.
+
+Do not turn subdivision up until that is understood. A knob that silently
+changes the economy is worse than no knob, and any calibration done with it on
+would be fitted to an artefact.
+
+Larger `cohortDispersion` has a separate and better-understood problem:
+permanent cost differences mean permanent competitive losers, and with no firm
+entry or exit they simply shrink and shed staff. At 0.09 unemployment reaches
+9.9% and output falls 3.7% a year. That one waits on firm demography.
+
 ## Watch the denominator
 
 A metric can flatter the model without anyone lying. Corporate insolvency was

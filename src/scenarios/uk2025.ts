@@ -102,6 +102,13 @@ export const uk2025: ScenarioSpec = {
 
   existingCorporateCustomers: 60,
 
+  // Subdivision is available but deliberately off: it damps inflation
+  // volatility (7.2% -> 5.4%) but pushes the inflation *level* from 2.4% to
+  // 7.2%, and that happens even with identical slices, which it should not.
+  // See docs/CALIBRATION.md before turning it up.
+  cohortSubdivision: 1,
+  cohortDispersion: 0.02,
+
   gilts: {
     tenors: [2, 5, 10, 30],
     couponSpread: 0.010,
