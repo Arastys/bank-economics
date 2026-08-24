@@ -59,13 +59,29 @@ export const CAMPAIGN_FORMAT = 1;
 /**
  * Below this, a run says nothing.
  *
+ * Two reasons, found a long way apart.
+ *
  * Year-on-year inflation has no history to compare against for the first
  * twelve months, and the summary discards the first thirteen for that reason.
  * A one-year run therefore reports inflation from a handful of samples taken
  * while the figure is still meaningless -- around -16%, which is not a finding
  * about the economy but an artefact of asking too early.
+ *
+ * The second is worse, because it looks like a result. The opening world is
+ * not in equilibrium, and finding one takes a large excursion through years
+ * three to six -- annual inflation of 10.5%, 10.7% and 12.7% -- that is over
+ * by year ten. Any mean that *ends* inside that excursion reports it rather
+ * than the model. Measured across 64 seeds, the same configuration scores
+ * 60.7±1.6 at three years, 162.1±1.4 at five, 67.5±1.0 at ten and 93.6±3.3 at
+ * twenty. Five years is not a slightly worse three: it is a different number
+ * about a different thing.
+ *
+ * This is not academic. Every preset once ran its comparisons at five years,
+ * and a 4,992-run sensitivity sweep taken there recommended raising
+ * `savingsBufferDays` by 30% -- a recommendation that reverses at ten years
+ * and twenty. A campaign measured inside the excursion tunes the excursion.
  */
-export const MINIMUM_USEFUL_YEARS = 3;
+export const MINIMUM_USEFUL_YEARS = 10;
 
 /**
  * Seeds are derived rather than random, so two campaigns run weeks apart are
@@ -104,7 +120,7 @@ export const PRESETS: Record<string, PresetShape> = {
     label: 'Smoke test',
     seeds: 2,
     sweepSeeds: 2,
-    years: 3,
+    years: MINIMUM_USEFUL_YEARS,
     horizons: [3, 4],
     sweepParameters: 3,
     sweepFactors: [0.7, 1.3],
@@ -116,7 +132,7 @@ export const PRESETS: Record<string, PresetShape> = {
     label: 'Quick check',
     seeds: 8,
     sweepSeeds: 6,
-    years: 3,
+    years: MINIMUM_USEFUL_YEARS,
     horizons: [3, 5],
     sweepFactors: [0.7, 1.3],
     subdivisionLevels: [1, 2, 4, 8],
@@ -127,7 +143,7 @@ export const PRESETS: Record<string, PresetShape> = {
     label: 'Standard campaign',
     seeds: 24,
     sweepSeeds: 16,
-    years: 5,
+    years: MINIMUM_USEFUL_YEARS,
     horizons: [3, 5, 10],
     sweepFactors: [0.7, 1.3],
     subdivisionLevels: [1, 2, 3, 4, 6, 8, 12],
@@ -138,7 +154,7 @@ export const PRESETS: Record<string, PresetShape> = {
     label: 'Deep campaign',
     seeds: 64,
     sweepSeeds: 48,
-    years: 5,
+    years: MINIMUM_USEFUL_YEARS,
     horizons: [3, 5, 10, 20],
     sweepFactors: [0.55, 0.7, 1.3, 1.6],
     subdivisionLevels: [1, 2, 3, 4, 6, 8, 12, 20],
@@ -155,7 +171,7 @@ export const PRESETS: Record<string, PresetShape> = {
     label: 'Overnight campaign',
     seeds: 160,
     sweepSeeds: 128,
-    years: 5,
+    years: MINIMUM_USEFUL_YEARS,
     horizons: [3, 5, 10, 20, 40],
     sweepFactors: [0.4, 0.55, 0.7, 1.3, 1.6, 2],
     subdivisionLevels: [1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20],

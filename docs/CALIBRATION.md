@@ -181,6 +181,56 @@ question, and it was answering the easy one. The campaign presets run to twenty
 and forty years for this reason, and `grossMargin` is recorded monthly because
 it is the variable that turns over first.
 
+## Five years is the worst horizon there is
+
+Three years was too short. Five is actively misleading, which is worse, because
+a longer run feels like a safer one.
+
+The opening world is not in equilibrium. Finding one takes a large excursion
+through years three to six — annual inflation of 10.5%, 10.7% and 12.7%, with
+unemployment humping to 10.8% and back — that is over by year ten. A mean that
+*ends* inside that excursion is a measurement of it. Across 64 seeds, the same
+default configuration scores:
+
+| horizon | score | inflation | contributed by inflation |
+| --- | ---: | ---: | ---: |
+| 3 years | 60.7 ±1.6 | 4.25% | 10 |
+| 5 years | 162.1 ±1.4 | 7.94% | 71 |
+| 10 years | 67.5 ±1.0 | 3.71% | 6 |
+| 20 years | 93.6 ±3.3 | 2.78% | 1 |
+
+Those error bars are small. The five-year figure is not noise, and it is not a
+worse three-year figure — it is a different number about a different thing.
+
+This cost a campaign. Every preset ran its baseline, sensitivity, subdivision
+and dispersion studies at five years, so 5,568 of a 6,016-run campaign were
+measured inside the excursion. The sensitivity sweep taken there ranked
+`savingsBufferDays` as the second most powerful parameter in the model and
+recommended raising it 30%:
+
+| buffer | 5y score | 10y score | 20y score |
+| --- | ---: | ---: | ---: |
+| 180 (default) | 162 | 67 | 100 |
+| 200 | — | 65 | 114 |
+| 220 | — | 84 | 70 |
+| 234 | 91 | — | — |
+| 240 | — | 145 | 152 |
+
+The recommendation reverses. At ten years and twenty the default is fine and
+the recommended value is clearly worse. Note also that the 10y and 20y columns
+are two seeds each, where the score carries roughly ±18 of seed noise — enough
+to say 240 is wrong, not enough to choose between 180 and 220.
+
+`MINIMUM_USEFUL_YEARS` is now ten and every preset uses it. The horizon study
+is exempt, because measuring what the horizon does to the answer is the point
+of it — and is how this was found.
+
+The excursion itself is a separate open question. It is most likely a scenario
+defect rather than a rules defect: the opening balance sheets, employment and
+prices are hand-set and need not be mutually consistent, so the first few years
+are the model arguing with its own initial conditions. Worth understanding
+before anyone trusts a three-year number either.
+
 ## Watch the denominator
 
 A metric can flatter the model without anyone lying. Corporate insolvency was

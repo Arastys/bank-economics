@@ -30,11 +30,18 @@ it.
 
 | preset | runs | simulated years | on 20 cores | file (gzipped) |
 | --- | ---: | ---: | ---: | ---: |
-| `smoke` | 28 | 86 | ~15s | 5 KB |
-| `quick` | 344 | 1,044 | ~3 min | 60 KB |
-| `standard` | 1,032 | 5,208 | ~13 min | 200 KB |
-| `deep` | 5,248 | 27,104 | ~1.1 h | 1 MB |
-| `overnight` | 19,616 | 104,864 | ~4.4 h | 3.5 MB |
+| `smoke` | 28 | 254 | ~1 min | 5 KB |
+| `quick` | 392 | 3,848 | ~9 min | 60 KB |
+| `standard` | 1,160 | 11,408 | ~26 min | 200 KB |
+| `deep` | 6,016 | 60,064 | ~2.2 h | 1 MB |
+| `overnight` | 22,688 | 230,464 | ~8.6 h | 3.5 MB |
+
+Every study except the horizon study runs for `MINIMUM_USEFUL_YEARS`, which is
+ten. That is not conservatism: the opening world settles through a large
+excursion in years three to six, and a mean that ends inside it reports the
+excursion rather than the model. The presets used to compare configurations at
+five years, which is the worst possible choice — see `docs/CALIBRATION.md`.
+Roughly doubling the runtime is the price of the answer being about the model.
 
 `--workers` defaults to your core count. Each worker holds one economy, so
 expect a few hundred megabytes of memory per worker on the long horizons.

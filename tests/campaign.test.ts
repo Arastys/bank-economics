@@ -34,14 +34,37 @@ describe('campaign shape', () => {
     }
   });
 
-  /** A run shorter than this reports artefacts rather than findings. */
-  it('never schedules a run too short to mean anything', () => {
+  /**
+   * A run shorter than this reports artefacts rather than findings, so no
+   * study that compares one configuration against another may use one.
+   *
+   * The horizon study is the exception, and legitimately: measuring what the
+   * horizon does to the answer is the whole point of it, and it is how the
+   * five-year problem was found in the first place.
+   */
+  it('never compares configurations over a run too short to mean anything', () => {
     for (const preset of Object.values(PRESETS)) {
       for (const study of buildStudies(preset)) {
+        if (study.id === 'horizon') continue;
         for (const job of study.jobs) {
           expect(job.years, `${preset.id}/${study.id}`).toBeGreaterThanOrEqual(MINIMUM_USEFUL_YEARS);
         }
       }
+    }
+  });
+
+  /**
+   * The failure this exists to prevent, which wasted a 6,016-run campaign: the
+   * opening world settles through a large excursion in years three to six, and
+   * every preset measured its comparisons at year five -- inside it. The
+   * sensitivity sweep taken there recommended a parameter change that reverses
+   * at ten years and at twenty.
+   */
+  it('keeps every preset out of the settling excursion', () => {
+    for (const preset of Object.values(PRESETS)) {
+      expect(preset.years, `${preset.id} sits in the excursion`).not.toBeLessThan(
+        MINIMUM_USEFUL_YEARS,
+      );
     }
   });
 
