@@ -3,9 +3,9 @@ import { bernoulli, hashString } from '../core/rng.js';
 import { AC } from '../ledger/accounts.js';
 import { naturalBalance } from '../ledger/ledger.js';
 import { estimatePd, gradeFromPd, refreshFinancials } from '../agents/credit.js';
-import { instrumentTypes } from '../instruments/registry.js';
 import type { InstrumentContext } from '../instruments/types.js';
-import { cohorts, owedBy, resolvedCompanies } from '../world/state.js';
+import { windUpBorrower } from '../instruments/loan.js';
+import { cohorts, resolvedCompanies } from '../world/state.js';
 import { PHASE, defineSystem } from './system.js';
 
 /** Baseline rate at which latent firms fail and are replaced. */
@@ -56,6 +56,9 @@ export const creditRiskSystem = defineSystem({
       // A firm with no debt cannot default on anyone, so only the indebted draw.
       if (!bernoulli(rng, company.pdAnnual / 365)) continue;
 
+      // This is a business failure, not a cash-flow wobble, so the firm is
+      // wound up outright rather than offered the work-out that an illiquid
+      // but solvent borrower would get.
       const ictx: InstrumentContext = {
         tick: ctx.tick,
         world,
@@ -63,24 +66,8 @@ export const creditRiskSystem = defineSystem({
         emit: ctx.emit,
         rng: ctx.rng,
       };
-      let exposure: Money = ZERO;
-      for (const inst of owedBy(world, company.id)) {
-        if (inst.status !== 'active') continue;
-        exposure = add(exposure, inst.outstanding);
-      }
-      // Defaulting the first loan winds the firm up and takes the rest with it.
-      const first = owedBy(world, company.id).find((inst) => inst.status === 'active');
-      if (first) instrumentTypes.tryGet(first.type)?.onDefault?.(ictx, first);
+      const exposure = windUpBorrower(ictx, company.id);
 
-      // Re-read: winding up the first loan may already have failed the firm
-      // and taken its other lenders down with it.
-      const current = world.entities[company.id];
-      if (current?.kind === 'company' && current.status !== 'defaulted') {
-        current.status = 'defaulted';
-        current.employees = 0;
-        ctx.emit('company.failed', { companyId: current.id, sector: current.sector });
-      }
-      company.inventoryUnits = 0;
       ctx.emit('notice', {
         severity: exposure > 0 ? 'warning' : 'info',
         message: `${company.name} has failed`,

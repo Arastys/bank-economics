@@ -3,7 +3,7 @@ import { newGame } from '../src/index.js';
 import { pounds, type Money } from '../src/core/money.js';
 import { promoteMember } from '../src/agents/lod.js';
 import { isInsolvent } from '../src/agents/insolvency.js';
-import { defaultLoan, originateLoan } from '../src/instruments/loan.js';
+import { defaultLoan, originateLoan, windUpBorrower } from '../src/instruments/loan.js';
 import { AC } from '../src/ledger/accounts.js';
 import { credit, debit, naturalBalance, post, trialBalance } from '../src/ledger/ledger.js';
 import { balanceSheet } from '../src/ledger/statements.js';
@@ -138,6 +138,60 @@ describe('genuinely insolvent', () => {
     defaultLoan(ctx, loan);
 
     expect(naturalBalance(engine.world.ledger, bank, AC.IMPAIRMENT)).toBeGreaterThan(impairedBefore);
+  });
+});
+
+describe('outright business failure', () => {
+  it('winds the firm up whatever its balance sheet says', () => {
+    const { engine, ctx, company, loan } = borrower();
+    // Solvent, and would be worked out if this were merely a missed payment.
+    expect(isInsolvent(engine.world.ledger, company.id)).toBe(false);
+
+    windUpBorrower(ctx, company.id);
+
+    expect(company.status).toBe('defaulted');
+    expect(company.employees).toBe(0);
+    expect(loan.status).toBe('defaulted');
+  });
+
+  it('leaves no facility behind', () => {
+    const { engine, ctx, company } = borrower();
+    windUpBorrower(ctx, company.id);
+
+    const live = Object.values(engine.world.instruments).filter(
+      (i) => i.obligorId === company.id && i.status === 'active',
+    );
+    expect(live).toEqual([]);
+  });
+
+  it('does nothing to a firm that has already gone', () => {
+    const { engine, ctx, company } = borrower();
+    windUpBorrower(ctx, company.id);
+    const before = trialBalance(engine.world.ledger);
+
+    expect(windUpBorrower(ctx, company.id)).toBe(0);
+    expect(trialBalance(engine.world.ledger)).toBe(before);
+  });
+
+  /**
+   * A firm marked failed while still owing live debt is a zombie: no staff, no
+   * output, and an exposure sitting on a lender's book that will never be
+   * collected or written off. Twenty-one of these were being created every two
+   * years before the wind-up path was separated from the work-out path.
+   */
+  it('leaves no dead firm still owing money over a long run', () => {
+    const engine = newGame('uk2025', { checkInvariantsEvery: 30 });
+    engine.run(500);
+
+    const zombies = Object.values(engine.world.entities).filter(
+      (entity) =>
+        entity.kind === 'company' &&
+        entity.status === 'defaulted' &&
+        Object.values(engine.world.instruments).some(
+          (inst) => inst.obligorId === entity.id && inst.status === 'active',
+        ),
+    );
+    expect(zombies.map((z) => z.id)).toEqual([]);
   });
 });
 

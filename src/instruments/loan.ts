@@ -3,7 +3,7 @@ import { nextId } from '../core/ids.js';
 import { addMonths, dailyRate, type Day } from '../core/time.js';
 import { AC, depositCode } from '../ledger/accounts.js';
 import { credit, debit, post, type LedgerState } from '../ledger/ledger.js';
-import { addInstrument, touch, type WorldState } from '../world/state.js';
+import { addInstrument, owedBy, touch, type WorldState } from '../world/state.js';
 import { paymentPostings, spendable } from '../world/transfer.js';
 import { activeLoansOf, isInsolvent, isStillActive, liquidateAssets, raiseCash } from '../agents/insolvency.js';
 import type { CreditGrade, EntityId } from '../world/types.js';
@@ -251,6 +251,46 @@ export function defaultLoan(ctx: InstrumentContext, inst: Instrument): void {
     }
     ctx.emit('company.failed', { companyId: trading.id, sector: trading.sector });
   }
+}
+
+/**
+ * Wind a firm up outright, whatever its balance sheet says.
+ *
+ * This is the other way a borrower can go: not "missed a payment" but "the
+ * business has failed" -- the customer left, the fraud surfaced, the founder
+ * walked. Assets are sold, every facility is written off, and the firm stops
+ * trading.
+ *
+ * The status is set before the facilities are defaulted, so `defaultLoan` sees
+ * a firm that has already gone and does not try to rescue it. Sale proceeds go
+ * to whichever lender is reached first, which stands in for a creditor
+ * hierarchy the model does not have yet.
+ *
+ * Lives here rather than in `agents/insolvency` only because it needs
+ * `defaultLoan`, and that would close an import cycle.
+ */
+export function windUpBorrower(ctx: InstrumentContext, companyId: EntityId): Money {
+  const { world, ledger, tick } = ctx;
+  const company = world.entities[companyId];
+  if (!company || company.kind !== 'company' || company.status === 'defaulted') return ZERO;
+
+  let exposure: Money = ZERO;
+  for (const inst of owedBy(world, companyId)) {
+    if (inst.status === 'active') exposure = add(exposure, inst.outstanding);
+  }
+
+  liquidateAssets(world, ledger, tick, companyId);
+  company.status = 'defaulted';
+  company.employees = 0;
+  company.inventoryUnits = 0;
+
+  for (const loanId of activeLoansOf(world, companyId)) {
+    const inst = world.instruments[loanId];
+    if (inst?.status === 'active') defaultLoan(ctx, inst);
+  }
+
+  ctx.emit('company.failed', { companyId, sector: company.sector });
+  return exposure;
 }
 
 /**
