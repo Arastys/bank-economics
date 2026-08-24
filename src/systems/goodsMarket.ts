@@ -4,7 +4,15 @@ import { AC, type AccountCode } from '../ledger/accounts.js';
 import { balance, credit, debit, post, type LedgerState } from '../ledger/ledger.js';
 import { clearMarket, spendable, type MarketLeg } from '../world/transfer.js';
 import { realRateGap, type SimConfig, type WorldState } from '../world/state.js';
-import { firmViews, personViews, type FirmView, type PersonView } from '../agents/views.js';
+import {
+  firmViews,
+  personViews,
+  totalWageBill,
+  abilityByRegion,
+  abilityOf,
+  type FirmView,
+  type PersonView,
+} from '../agents/views.js';
 import { PHASE, defineSystem } from './system.js';
 
 /** Five working days in seven. */
@@ -157,6 +165,7 @@ function shareDemand(
 function collectBuyers(world: WorldState, ledger: LedgerState, firms: FirmView[]): Buyer[] {
   const buyers: Buyer[] = [];
   const rateGap = realRateGap(world);
+  const ability = abilityByRegion(world);
 
   for (const person of personViews(world)) {
     // People budget from a smoothed income figure rather than from what
@@ -174,7 +183,7 @@ function collectBuyers(world: WorldState, ledger: LedgerState, firms: FirmView[]
   const appetite = investmentAppetite(world);
   for (const firm of firms) {
     // Only firms with a month of wages in hand put money into capacity.
-    const monthlyWages = scale((firm.employees * firm.wagePerEmployee) as Money, 21);
+    const monthlyWages = scale(totalWageBill(firm, abilityOf(ability, firm.region)), 21);
     const cash = spendable(world, ledger, firm.id);
     if (cash <= monthlyWages) continue;
     const budget = min(

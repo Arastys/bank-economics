@@ -3,7 +3,7 @@ import { isMonthEnd, toDate } from '../core/time.js';
 import { AC } from '../ledger/accounts.js';
 import { naturalBalance } from '../ledger/ledger.js';
 import { refreshFinancials } from '../agents/credit.js';
-import { firmViews, type FirmView } from '../agents/views.js';
+import { FirmView, abilityByRegion, abilityOf, firmViews, totalWageBill } from '../agents/views.js';
 import { spendable } from '../world/transfer.js';
 import { resolvedCompanies, type WorldState } from '../world/state.js';
 import { PHASE, defineSystem } from './system.js';
@@ -27,6 +27,7 @@ export const firmDecisionSystem = defineSystem({
     const { world, ledger } = ctx;
     const { config } = world;
     const firms = firmViews(world);
+    const ability = abilityByRegion(world);
 
     const workforce = world.economy.labourForce * config.labourParticipation;
     const employed = firms.reduce((total, firm) => total + firm.employees, 0);
@@ -57,7 +58,8 @@ export const firmDecisionSystem = defineSystem({
       // its own tail.
       const sales = Math.max(1, firm.expectedSales);
       const stockDays = firm.inventoryUnits / sales;
-      const wageBill = firm.employees * firm.wagePerEmployee;
+      // In efficiency units, matching what production will actually pay out.
+      const wageBill = totalWageBill(firm, abilityOf(ability, firm.region));
       const cashMonths = wageBill > 0 ? spendable(world, ledger, firm.id) / (wageBill * 21) : 99;
 
       if (stockDays < config.targetStockDays * 0.5 && cashMonths > 1) {
@@ -89,7 +91,10 @@ export const firmDecisionSystem = defineSystem({
       refreshFinancials(ledger, company, ctx.tick);
 
       // Aim to hold roughly a month of wages in the bank; borrow the gap.
-      const monthlyWages = scale((company.employees * company.wagePerEmployee) as Money, 21);
+      const monthlyWages = scale(
+        totalWageBill(new FirmView(company), abilityOf(ability, company.region)),
+        21,
+      );
       const cash = spendable(world, ledger, company.id);
       const gap = sub(monthlyWages, cash);
       const debt = naturalBalance(ledger, company.id, AC.BORROWINGS);

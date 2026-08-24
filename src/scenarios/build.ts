@@ -40,6 +40,34 @@ const GOVERNMENT_ID = 'gov:hmt';
  * At 18/49/15 that is 22% children, 60% working, 18% retired, which is within
  * a point of the United Kingdom.
  */
+/**
+ * How good each pool's people are at the work.
+ *
+ * Drawn off identity like a firm's quality, then normalised so the
+ * working-age-weighted mean across the economy is exactly one. The
+ * normalisation is the whole point: five draws out of a log-normal have a
+ * sample mean that is not one, and without correcting it the spread would
+ * shift total output -- reading as a productivity change rather than as the
+ * dispersion it is meant to be.
+ */
+function assignAbility(world: WorldState, personCohorts: Cohort[]): void {
+  const spread = world.config.personAbilitySpread;
+  if (spread <= 0 || personCohorts.length === 0) return;
+
+  const raw = personCohorts.map((cohort) => {
+    const rng = identityRng(world.seed, `ability:${cohort.id}`);
+    return Math.max(0.4, Math.min(2.5, logNormal(rng, -(spread * spread) / 2, spread)));
+  });
+  const heads = personCohorts.map((cohort) => cohort.pool.workingAge ?? cohort.count);
+  const total = heads.reduce((t, h) => t + h, 0);
+  if (total <= 0) return;
+  const weightedMean = raw.reduce((t, a, i) => t + a * heads[i]!, 0) / total;
+  if (weightedMean <= 0) return;
+  personCohorts.forEach((cohort, i) => {
+    cohort.pool.ability = raw[i]! / weightedMean;
+  });
+}
+
 function childrenOf(workingAge: number): number {
   return Math.round((workingAge * DEFAULT_CONFIG.yearsAsChild) / DEFAULT_CONFIG.yearsWorking);
 }
@@ -220,6 +248,7 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
         workingAge: cohortSpec.count,
         children: childrenOf(cohortSpec.count),
         retired: retiredOf(cohortSpec.count),
+        ability: 1,
         prosperityReference: 0,
         lastIncome: 0,
         incomeRate: round(
@@ -497,6 +526,7 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
   for (const cohort of companyCohorts) potential += (cohort.pool.employees ?? 0) * ((cohort.archetype as { meanProductivity: number }).meanProductivity ?? 0);
   for (const customer of customers) potential += customer.company.employees * customer.company.productivity;
   for (const cohort of personCohorts) labourForce += cohort.pool.workingAge ?? cohort.count;
+  assignAbility(world, personCohorts);
 
   world.economy.potentialOutput = potential;
   world.economy.outputUnits = potential;

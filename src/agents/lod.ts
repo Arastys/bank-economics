@@ -179,6 +179,9 @@ function buildPerson(world: WorldState, cohort: Cohort, identity: string, sizeFa
     employed: true,
     wage: Math.round(archetype.meanWage * sizeFactor) as Money,
     propensityToConsume: archetype.meanPropensityToConsume,
+    // Somebody materialised out of a pool is an average member of it until
+    // there is a reason to say otherwise.
+    ability: cohort.pool.ability ?? 1,
     creditGrade: archetype.creditGrade,
     pdAnnual: 0.015,
     lastIncome: ZERO,

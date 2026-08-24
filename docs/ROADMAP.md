@@ -249,8 +249,23 @@ floored at zero rather than netted off, a hundred thousand of those floors is
 demand out of nowhere. Children are mouths, not decisions: they eat from the
 same budget as the adults they live with, and the split is over adults.
 
+People also differ in how good they are at the work. `personAbilitySpread`
+gives each pool an ability drawn off identity and then normalised so the
+working-age-weighted mean is exactly one -- without that, five draws out of a
+log-normal shift total output by whatever the sample happened to do, and the
+knob reads as a productivity change rather than a dispersion.
+
+Ability reaches output and pay together, through headcount in efficiency
+units, and it has to. Raising output alone left a region of below-average
+workers producing a third less for the same payroll: unit costs collapsed and
+its firms failed for reasons unrelated to how they were run. Four seeds in
+twenty-four scored over 500, two over 1400, against a baseline of 66. Scaling
+both leaves the cost of a unit untouched and puts the whole difference into
+what people take home -- in a region with two pools, the abler one takes 15%
+more per head and the other 3% less.
+
 Firms still have no demography, and that remains the largest single term in
-the score -- 40.6 of 66.9, untouched by every parameter that describes it.
+the score -- 40.5 of 67.8, untouched by every parameter that describes it.
 
 ## Known open problem
 

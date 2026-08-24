@@ -127,6 +127,8 @@ export interface Person extends EntityBase {
   wage: Money;
   /** Share of income spent rather than saved. */
   propensityToConsume: number;
+  /** How good this person is at the work, as a multiple of the average. */
+  ability: number;
   bankId?: EntityId;
   creditGrade: CreditGrade;
   pdAnnual: number;

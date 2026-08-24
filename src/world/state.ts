@@ -103,6 +103,16 @@ export interface SimConfig {
   incomeSmoothing: number;
   /** Share of the working-age population in the labour market. */
   labourParticipation: number;
+  /**
+   * How much people differ in how good they are at the work, as a log-normal
+   * spread around the average.
+   *
+   * It reaches output and pay together, because those are the same fact seen
+   * from either side: a better workforce produces more from the same firm, and
+   * takes a larger share of the wage bill for doing it. Zero makes everybody
+   * identical, which is what they were.
+   */
+  personAbilitySpread: number;
   /** Years from birth to joining the workforce. */
   yearsAsChild: number;
   /** Years spent of working age. */
@@ -276,7 +286,7 @@ export interface WorldState {
   config: SimConfig;
 }
 
-export const WORLD_VERSION = 6;
+export const WORLD_VERSION = 7;
 
 export const DEFAULT_CONFIG: SimConfig = {
   applicationValidityDays: 14,
@@ -303,6 +313,7 @@ export const DEFAULT_CONFIG: SimConfig = {
   savingsRateSensitivity: 0,
   incomeSmoothing: 0.15,
   labourParticipation: 0.96,
+  personAbilitySpread: 0.10,
   yearsAsChild: 18,
   yearsWorking: 49,
   yearsRetired: 15,

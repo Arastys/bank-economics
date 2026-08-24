@@ -2,7 +2,16 @@ import { ZERO, allocate, atLeastZero, min, sub, type Money } from '../core/money
 import { isBusinessDay } from '../core/time.js';
 import { AC } from '../ledger/accounts.js';
 import { clearMarket, spendable, type MarketLeg } from '../world/transfer.js';
-import { firmViews, personViews, totalWageBill, type FirmView, type PersonView } from '../agents/views.js';
+import {
+  effectiveLabour,
+  firmViews,
+  personViews,
+  totalWageBill,
+  abilityByRegion,
+  abilityOf,
+  type FirmView,
+  type PersonView,
+} from '../agents/views.js';
 import { owedBy, type WorldState } from '../world/state.js';
 import { PHASE, defineSystem } from './system.js';
 
@@ -64,10 +73,12 @@ export const productionSystem = defineSystem({
     // Wages were shared out by a fixed set of weights and a pool's spending
     // decision could not tell a boom from a slump.
     const payrolls: { firm: FirmView; paid: Money }[] = [];
+    const abilities = abilityByRegion(world);
 
     for (const firm of firmViews(world)) {
       if (firm.employees <= 0) continue;
-      const wageBill = totalWageBill(firm);
+      const ability = abilityOf(abilities, firm.region);
+      const wageBill = totalWageBill(firm, ability);
       // Hold back money for a loan payment falling due shortly. Wages are paid
       // before debt service in the tick, so without this a firm spends its way
       // into arrears on a bill it could easily have met -- and since a default
@@ -77,7 +88,11 @@ export const productionSystem = defineSystem({
       const paid = min(wageBill, atLeastZero(funds));
       const coverage = wageBill > 0 ? paid / wageBill : 1;
 
-      const produced = firm.employees * firm.productivity * coverage;
+      // What a firm gets out of a day depends on who is doing the work, not
+      // only on the firm. A better workforce produces more from the same
+      // plant, and takes a larger share of the wage bill for it -- those are
+      // the same fact from either side, so both read `ability`.
+      const produced = effectiveLabour(firm, ability) * firm.productivity * coverage;
       firm.inventoryUnits += produced;
       outputUnits += produced;
       employed += firm.employees * coverage;
@@ -100,7 +115,7 @@ export const productionSystem = defineSystem({
       // Wages go to people where the firm actually is, weighted by how
       // many of them are in work.
       const recipients = byRegion.get(firm.region) ?? people;
-      const weights = recipients.map((h) => Math.max(0, h.employed));
+      const weights = recipients.map((h) => Math.max(0, h.employed * h.ability));
       const shares = allocate(paid, weights);
       recipients.forEach((h, i) => {
         const share = shares[i] ?? ZERO;

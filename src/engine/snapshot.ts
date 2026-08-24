@@ -114,6 +114,19 @@ migrations.set(5, (world) => {
   return world;
 });
 
+/**
+ * People differ in how good they are at the work. An old save has no such
+ * distinction, so everybody comes forward as exactly average -- which is what
+ * they were, and leaves the loaded economy producing and paying what it did.
+ */
+migrations.set(6, (world) => {
+  for (const entity of Object.values(world.entities)) {
+    if (entity.kind === 'person') entity.ability = 1;
+    else if (entity.kind === 'cohort' && entity.memberKind === 'person') entity.pool.ability = 1;
+  }
+  return world;
+});
+
 export function load(json: string): WorldState {
   const snapshot = JSON.parse(json) as Snapshot;
   if (typeof snapshot?.version !== 'number' || !snapshot.world) {

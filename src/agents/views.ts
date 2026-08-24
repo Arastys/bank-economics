@@ -199,6 +199,20 @@ export class PersonView {
     if (this.target.kind === 'cohort') this.target.pool.retired = Math.max(0, value);
   }
 
+  /**
+   * How good these people are at the work, as a multiple of the average.
+   *
+   * Normalised at build so the employment-weighted mean across the economy is
+   * exactly one. Without that, drawing five pools out of a log-normal shifts
+   * total output by whatever the sample happened to do, and the spread would
+   * read as a productivity change rather than as a dispersion.
+   */
+  get ability(): number {
+    return this.target.kind === 'cohort'
+      ? (this.target.pool.ability ?? 1)
+      : (this.target.ability ?? 1);
+  }
+
   /** The real income per worker this pool has got used to. */
   get prosperityReference(): number {
     return this.target.kind === 'cohort' ? (this.target.pool.prosperityReference ?? 0) : 0;
@@ -293,8 +307,56 @@ export function personViews(world: WorldState): PersonView[] {
   return views;
 }
 
-export function totalWageBill(view: FirmView): Money {
-  return Math.round(view.employees * view.wagePerEmployee) as Money;
+export function totalWageBill(view: FirmView, ability = 1): Money {
+  return Math.round(effectiveLabour(view, ability) * view.wagePerEmployee) as Money;
+}
+
+/**
+ * Headcount in efficiency units: what the firm's staff amount to once you
+ * account for how good they are.
+ *
+ * Output and the wage bill both read this, and they have to. Ability that
+ * raised output alone would leave a region of below-average workers producing
+ * a third less for the same payroll -- unit costs collapse, and the firms there
+ * fail for a reason that has nothing to do with how they are run. Scaling both
+ * leaves the cost of a unit untouched and puts the whole of the difference
+ * where it belongs: in what the people take home.
+ */
+export function effectiveLabour(view: FirmView, ability: number): number {
+  return view.employees * Math.max(0, ability);
+}
+
+/**
+ * How good the people working in each region are, as a multiple of the
+ * average.
+ *
+ * Weighted by who is actually in work rather than by who lives there, since it
+ * is the people at the benches who make the output. Regions with nobody
+ * working are absent, and callers read them as one -- the neutral answer for a
+ * firm with no staff.
+ *
+ * Built for the whole economy in one pass and deliberately not per firm.
+ * `personViews` walks every entity in the world to build its list, so asking
+ * it once per firm per business day is thousands of full scans a day: doing
+ * that made the test suite eight times slower before anything else noticed.
+ */
+export function abilityByRegion(world: WorldState): Map<RegionId, number> {
+  const weighted = new Map<RegionId, number>();
+  const heads = new Map<RegionId, number>();
+  for (const pool of personViews(world)) {
+    const inWork = Math.max(0, pool.employed);
+    if (inWork <= 0) continue;
+    weighted.set(pool.region, (weighted.get(pool.region) ?? 0) + inWork * pool.ability);
+    heads.set(pool.region, (heads.get(pool.region) ?? 0) + inWork);
+  }
+  const out = new Map<RegionId, number>();
+  for (const [region, count] of heads) out.set(region, weighted.get(region)! / count);
+  return out;
+}
+
+/** How good this region's workers are, or one where nobody is working. */
+export function abilityOf(byRegion: Map<RegionId, number>, region: RegionId): number {
+  return byRegion.get(region) ?? 1;
 }
 
 export const NO_MONEY = ZERO;
