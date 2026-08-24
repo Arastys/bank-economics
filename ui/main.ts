@@ -13,6 +13,7 @@ import { CREDIT_GRADES, type CreditGrade } from '../src/world/types.js';
 import type { GameCommand } from '../src/commands/index.js';
 import type { DashboardSnapshot, LineItem } from './snapshot.js';
 import type { FromWorker, ToWorker } from './protocol.js';
+import { anchorHelpBubbles, help } from './help.js';
 
 const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
 
@@ -66,18 +67,20 @@ function command(gameCommand: GameCommand): void {
 interface Panel {
   id: string;
   title: string;
+  /** Key into the help copy, shown as a question mark beside the title. */
+  help: string;
   wide?: boolean;
   html(snapshot: DashboardSnapshot): string;
 }
 
 const panels: Panel[] = [
-  { id: 'position', title: 'Position', wide: true, html: renderPosition },
-  { id: 'sheet', title: 'Balance sheet', html: renderBalanceSheet },
-  { id: 'committee', title: 'Credit committee', html: renderCommittee },
-  { id: 'policy', title: 'Pricing &amp; policy', html: renderPolicy },
-  { id: 'book', title: 'Loan book', html: renderBook },
-  { id: 'economy', title: 'The economy', html: renderEconomy },
-  { id: 'feed', title: 'Activity', wide: true, html: renderFeed },
+  { id: 'position', title: 'Position', help: 'position', wide: true, html: renderPosition },
+  { id: 'sheet', title: 'Balance sheet', help: 'sheet', html: renderBalanceSheet },
+  { id: 'committee', title: 'Credit committee', help: 'committee', html: renderCommittee },
+  { id: 'policy', title: 'Pricing &amp; policy', help: 'policy', html: renderPolicy },
+  { id: 'book', title: 'Loan book', help: 'book', html: renderBook },
+  { id: 'economy', title: 'The economy', help: 'economy', html: renderEconomy },
+  { id: 'feed', title: 'Activity', help: 'activity', wide: true, html: renderFeed },
 ];
 
 const painted = new Map<string, string>();
@@ -89,13 +92,13 @@ function buildShell(): void {
       <span class="date num" id="date"></span>
       <span class="pill" id="rate"></span>
       <span class="pill" id="queued"></span>
-      <div class="speeds" id="speeds"></div>
+      <div class="speeds" id="speeds">${help('speed')}</div>
     </header>
     <main>
       ${panels
         .map(
           (panel) => `<section class="${panel.wide ? 'wide' : ''}">
-            <h2>${panel.title}</h2>
+            <h2>${panel.title}${help(panel.help)}</h2>
             <div class="body${panel.id === 'feed' ? ' feed' : ''}" id="panel-${panel.id}"></div>
           </section>`,
         )
@@ -111,6 +114,7 @@ function paint(): void {
   setText('queued', `${snapshot.queued} queued`);
   patch('speeds', renderSpeeds());
   for (const panel of panels) patch(`panel-${panel.id}`, panel.html(snapshot));
+  anchorHelpBubbles(app);
 }
 
 function setText(id: string, text: string): void {
@@ -126,25 +130,27 @@ function patch(id: string, html: string): void {
 }
 
 function renderSpeeds(): string {
-  return (Object.keys(SPEEDS) as SpeedName[])
-    .map((name) => `<button data-speed="${name}" aria-pressed="${speed === name}">${name}</button>`)
-    .join('');
+  return (
+    (Object.keys(SPEEDS) as SpeedName[])
+      .map((name) => `<button data-speed="${name}" aria-pressed="${speed === name}">${name}</button>`)
+      .join('') + help('speed')
+  );
 }
 
 function renderPosition({ position: p }: DashboardSnapshot): string {
   return `<div class="tiles">
-      ${tile('Total assets', formatShort(p.totalAssets as Money))}
-      ${tile('Equity', formatShort(p.equity as Money), p.equity <= 0 ? 'bad' : '')}
-      ${tile('Profit YTD', formatShort(p.profitYtd as Money), p.profitYtd >= 0 ? 'good' : 'bad')}
-      ${tile('Capital ratio', pct(p.capitalRatio), tone(p.capitalRatio, p.minimumCapitalRatio))}
-      ${tile('Liquidity (LCR)', pct(p.lcr), tone(p.lcr, p.minimumLiquidityRatio))}
-      ${tile('Loans', formatShort(p.loans as Money))}
-      ${tile('Deposits', formatShort(p.deposits as Money))}
-      ${tile('Gilts', formatShort(p.bonds as Money))}
-      ${tile('Reserves', formatShort(p.reserves as Money))}
-      ${tile('Bank Rate', pct(p.bankRate))}
-      ${tile('Inflation', pct(p.inflation), Math.abs(p.inflation - p.inflationTarget) > 0.02 ? 'warn' : 'good')}
-      ${tile('Unemployment', pct(p.unemployment))}
+      ${tile('Total assets', formatShort(p.totalAssets as Money), '', 'totalAssets')}
+      ${tile('Equity', formatShort(p.equity as Money), p.equity <= 0 ? 'bad' : '', 'equity')}
+      ${tile('Profit YTD', formatShort(p.profitYtd as Money), p.profitYtd >= 0 ? 'good' : 'bad', 'profitYtd')}
+      ${tile('Capital ratio', pct(p.capitalRatio), tone(p.capitalRatio, p.minimumCapitalRatio), 'capitalRatio')}
+      ${tile('Liquidity (LCR)', pct(p.lcr), tone(p.lcr, p.minimumLiquidityRatio), 'lcr')}
+      ${tile('Loans', formatShort(p.loans as Money), '', 'loans')}
+      ${tile('Deposits', formatShort(p.deposits as Money), '', 'deposits')}
+      ${tile('Gilts', formatShort(p.bonds as Money), '', 'gilts')}
+      ${tile('Reserves', formatShort(p.reserves as Money), '', 'reserves')}
+      ${tile('Bank Rate', pct(p.bankRate), '', 'bankRate')}
+      ${tile('Inflation', pct(p.inflation), Math.abs(p.inflation - p.inflationTarget) > 0.02 ? 'warn' : 'good', 'inflation')}
+      ${tile('Unemployment', pct(p.unemployment), '', 'unemployment')}
     </div>`;
 }
 
@@ -165,7 +171,9 @@ function renderBalanceSheet({ sheet }: DashboardSnapshot): string {
 
 function renderCommittee(snapshot: DashboardSnapshot): string {
   return `<div class="row">
-      <label><input type="checkbox" data-policy="autoUnderwrite" ${snapshot.policy.autoUnderwrite ? 'checked' : ''}> Underwrite automatically</label>
+      <span><label><input type="checkbox" data-policy="autoUnderwrite" ${
+        snapshot.policy.autoUnderwrite ? 'checked' : ''
+      }> Underwrite automatically</label>${help('autoUnderwrite')}</span>
       <span class="pill">${snapshot.applicationsWaiting} on the desk</span>
     </div>
     ${
@@ -192,12 +200,12 @@ function renderCommittee(snapshot: DashboardSnapshot): string {
 }
 
 function renderPolicy({ policy }: DashboardSnapshot): string {
-  return `${slider('depositRate', 'Instant access rate', policy.depositRate, 0, 0.08)}
-    ${slider('termDepositRate', 'Term deposit rate', policy.termDepositRate, 0, 0.1)}
-    ${slider('spreadBB', 'Lending spread (BB)', policy.lendingSpread.BB, 0, 0.12)}
-    ${slider('dsr', 'Max debt service ratio', policy.maxDebtServiceRatio, 0.1, 1)}
+  return `${slider('depositRate', 'Instant access rate', policy.depositRate, 0, 0.08, 'depositRate')}
+    ${slider('termDepositRate', 'Term deposit rate', policy.termDepositRate, 0, 0.1, 'termDepositRate')}
+    ${slider('spreadBB', 'Lending spread (BB)', policy.lendingSpread.BB, 0, 0.12, 'lendingSpread')}
+    ${slider('dsr', 'Max debt service ratio', policy.maxDebtServiceRatio, 0.1, 1, 'debtService')}
     <div class="control">
-      <label for="minGrade">Lowest grade we will lend to</label>
+      <label for="minGrade">Lowest grade we will lend to${help('minimumGrade')}</label>
       <select id="minGrade" data-policy="minimumGrade">
         ${CREDIT_GRADES.map((g) => `<option value="${g}" ${g === policy.minimumGrade ? 'selected' : ''}>${g}</option>`).join('')}
       </select>
@@ -244,8 +252,8 @@ function renderFeed({ feed }: DashboardSnapshot): string {
 
 // --- small helpers ---------------------------------------------------------
 
-function tile(key: string, value: string, toneClass = ''): string {
-  return `<div class="tile"><div class="k">${key}</div><div class="v num ${toneClass}">${value}</div></div>`;
+function tile(key: string, value: string, toneClass = '', helpKey = ''): string {
+  return `<div class="tile"><div class="k">${key}${help(helpKey)}</div><div class="v num ${toneClass}">${value}</div></div>`;
 }
 
 function tone(value: number, minimum: number): string {
@@ -298,9 +306,16 @@ function chart(title: string, series: number[] | undefined, format: (value: numb
     </div>`;
 }
 
-function slider(id: string, title: string, value: number, min: number, max: number): string {
+function slider(
+  id: string,
+  title: string,
+  value: number,
+  min: number,
+  max: number,
+  helpKey = '',
+): string {
   return `<div class="control">
-      <label for="${id}">${title}</label>
+      <label for="${id}">${title}${help(helpKey)}</label>
       <output class="num" for="${id}">${pct(value)}</output>
       <input type="range" id="${id}" min="${min}" max="${max}" step="0.0005" value="${value}" />
     </div>`;
