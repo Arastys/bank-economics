@@ -40,29 +40,70 @@ export function createLedger(journalCap = 2000): LedgerState {
   return { accounts: {}, accountsByOwner: {}, journal: [], journalCap, nextTxId: 1 };
 }
 
-export function ensureAccount(ledger: LedgerState, ownerId: string, code: AccountCode, name?: string): Account {
-  const id = accountId(ownerId, code);
-  let account = ledger.accounts[id];
-  if (!account) {
-    account = { id, ownerId, code, kind: kindOf(code), name: name ?? code, balance: ZERO };
-    ledger.accounts[id] = account;
-    (ledger.accountsByOwner[ownerId] ??= []).push(id);
+/**
+ * The same accounts as `ledger.accounts`, reached owner-then-code.
+ *
+ * Every balance read used to build a `${ownerId}/${code}` string to index the
+ * flat record with: 13.1M allocations in a ten-year run, and a quarter of its
+ * wall clock across `ensureAccount`, `balance` and `naturalBalance`. Two
+ * shallow map lookups build nothing.
+ *
+ * It holds the same `Account` objects rather than copies, so the balances a
+ * posting mutates are the ones read back here. It lives in a WeakMap beside
+ * the ledger because the world has to stay plain data and survive
+ * `JSON.stringify`; a loaded save arrives without one and builds it on first
+ * use. `ledger.accountsByOwner` stays as it is -- it is part of the saved
+ * world and records ownership, where this is a lookup path and derived.
+ */
+const accountIndex = new WeakMap<LedgerState, Map<string, Map<AccountCode, Account>>>();
+
+function indexOf(ledger: LedgerState): Map<string, Map<AccountCode, Account>> {
+  let index = accountIndex.get(ledger);
+  if (index) return index;
+  index = new Map();
+  for (const id in ledger.accounts) {
+    const account = ledger.accounts[id]!;
+    let byCode = index.get(account.ownerId);
+    if (!byCode) {
+      byCode = new Map();
+      index.set(account.ownerId, byCode);
+    }
+    byCode.set(account.code, account);
   }
+  accountIndex.set(ledger, index);
+  return index;
+}
+
+export function ensureAccount(ledger: LedgerState, ownerId: string, code: AccountCode, name?: string): Account {
+  const index = indexOf(ledger);
+  let byCode = index.get(ownerId);
+  const existing = byCode?.get(code);
+  if (existing) return existing;
+
+  const id = accountId(ownerId, code);
+  const account: Account = { id, ownerId, code, kind: kindOf(code), name: name ?? code, balance: ZERO };
+  ledger.accounts[id] = account;
+  (ledger.accountsByOwner[ownerId] ??= []).push(id);
+  if (!byCode) {
+    byCode = new Map();
+    index.set(ownerId, byCode);
+  }
+  byCode.set(code, account);
   return account;
 }
 
 export function getAccount(ledger: LedgerState, ownerId: string, code: AccountCode): Account | undefined {
-  return ledger.accounts[accountId(ownerId, code)];
+  return indexOf(ledger).get(ownerId)?.get(code);
 }
 
 /** Debit-positive balance. Missing accounts read as zero. */
 export function balance(ledger: LedgerState, ownerId: string, code: AccountCode): Money {
-  return ledger.accounts[accountId(ownerId, code)]?.balance ?? ZERO;
+  return indexOf(ledger).get(ownerId)?.get(code)?.balance ?? ZERO;
 }
 
 /** Balance in the account's natural direction: a deposit liability reads positive. */
 export function naturalBalance(ledger: LedgerState, ownerId: string, code: AccountCode): Money {
-  const account = ledger.accounts[accountId(ownerId, code)];
+  const account = indexOf(ledger).get(ownerId)?.get(code);
   if (!account) return ZERO;
   return (account.kind === 'asset' || account.kind === 'expense' ? account.balance : -account.balance) as Money;
 }
@@ -92,6 +133,9 @@ export function forgetOwner(ledger: LedgerState, ownerId: string): void {
   }
   for (const id of ledger.accountsByOwner[ownerId] ?? []) delete ledger.accounts[id];
   delete ledger.accountsByOwner[ownerId];
+  // Only if the index has been built: if it has not, it will be built from the
+  // flat record after this deletion and will not contain them anyway.
+  accountIndex.get(ledger)?.delete(ownerId);
 }
 
 export class UnbalancedTransactionError extends Error {
