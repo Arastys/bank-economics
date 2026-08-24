@@ -93,6 +93,27 @@ migrations.set(4, (world) => {
   return world;
 });
 
+/**
+ * People have ages now. An old save has a population that was entirely of
+ * working age, so its headcount becomes the working-age band and the children
+ * and pensioners a stationary population carries are added around it -- the
+ * same shape a new world starts in, so a loaded save does not hand the labour
+ * market a shock.
+ */
+migrations.set(5, (world) => {
+  const { yearsAsChild, yearsWorking, yearsRetired } = world.config;
+  for (const entity of Object.values(world.entities)) {
+    if (entity.kind !== 'cohort' || entity.memberKind !== 'person') continue;
+    const workingAge = entity.count;
+    entity.pool.workingAge = workingAge;
+    entity.pool.children = Math.round((workingAge * yearsAsChild) / yearsWorking);
+    entity.pool.retired = Math.round((workingAge * yearsRetired) / yearsWorking);
+    entity.pool.prosperityReference = 0;
+    entity.count = entity.pool.workingAge + entity.pool.children + entity.pool.retired;
+  }
+  return world;
+});
+
 export function load(json: string): WorldState {
   const snapshot = JSON.parse(json) as Snapshot;
   if (typeof snapshot?.version !== 'number' || !snapshot.world) {

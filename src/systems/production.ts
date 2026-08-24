@@ -92,7 +92,11 @@ export const productionSystem = defineSystem({
 
     world.economy.outputUnits = outputUnits;
     world.economy.employed = employed;
-    world.economy.labourForce = people.reduce((total, h) => total + h.count, 0);
+    // Working age only. Children and the retired are in the population and in
+    // the queue at the shops, but they are not labour supply, and counting
+    // them as such was the whole reason `labourParticipation` had to sit at a
+    // suspiciously round 0.96.
+    world.economy.labourForce = people.reduce((total, h) => total + h.workingAge, 0);
     // Measured against the people actually in the labour market, not the whole
     // population, so a fully employed economy reads as zero rather than as the
     // participation gap.

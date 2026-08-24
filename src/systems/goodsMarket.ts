@@ -246,7 +246,14 @@ export function poolBudget(
   config: SimConfig,
   rateGap: number,
 ): Money {
-  const heads = person.count;
+  // Adults only. A child has no finances of its own: it eats out of the same
+  // budget as the adults it lives with, so it is a mouth rather than a
+  // separate decision. Counting children as budget units of their own made
+  // each of them defend a cushion nobody was saving for, and since a shortfall
+  // is floored at zero rather than netted off, a hundred thousand of those
+  // floors was pure demand out of nowhere -- inflation volatility went from
+  // 4.2 to 39.0 when demography first arrived.
+  const heads = Math.max(0, person.count - person.children);
   if (heads <= 0) return ZERO;
   const working = Math.max(0, Math.min(heads, person.employed));
   const idle = heads - working;

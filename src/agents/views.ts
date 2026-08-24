@@ -167,6 +167,53 @@ export class PersonView {
     return this.target.kind === 'cohort' ? this.target.count : 1;
   }
 
+  /**
+   * The three stages of a life, as headcounts.
+   *
+   * A pool that has never been through demography has no bands, so it reads as
+   * all of working age -- which is what every person in this model was before
+   * there were ages at all.
+   */
+  get children(): number {
+    return this.target.kind === 'cohort' ? (this.target.pool.children ?? 0) : 0;
+  }
+
+  set children(value: number) {
+    if (this.target.kind === 'cohort') this.target.pool.children = Math.max(0, value);
+  }
+
+  get workingAge(): number {
+    if (this.target.kind !== 'cohort') return 1;
+    return this.target.pool.workingAge ?? this.target.count;
+  }
+
+  set workingAge(value: number) {
+    if (this.target.kind === 'cohort') this.target.pool.workingAge = Math.max(0, value);
+  }
+
+  get retired(): number {
+    return this.target.kind === 'cohort' ? (this.target.pool.retired ?? 0) : 0;
+  }
+
+  set retired(value: number) {
+    if (this.target.kind === 'cohort') this.target.pool.retired = Math.max(0, value);
+  }
+
+  /** The real income per worker this pool has got used to. */
+  get prosperityReference(): number {
+    return this.target.kind === 'cohort' ? (this.target.pool.prosperityReference ?? 0) : 0;
+  }
+
+  set prosperityReference(value: number) {
+    if (this.target.kind === 'cohort') this.target.pool.prosperityReference = Math.max(0, value);
+  }
+
+  /** Keep the headline count equal to the three bands it is made of. */
+  reconcileCount(): void {
+    if (this.target.kind !== 'cohort') return;
+    this.target.count = this.children + this.workingAge + this.retired;
+  }
+
   private get archetype(): PersonArchetype {
     return (this.target as Cohort).archetype as PersonArchetype;
   }

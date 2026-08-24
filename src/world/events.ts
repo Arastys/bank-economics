@@ -50,6 +50,7 @@ export interface GameEvents {
   'bond.redeemed': { bondId: string; amount: Money };
 
   'company.founded': { companyId: EntityId; sector: string };
+  'people.populationChanged': { births: number; deaths: number };
   'company.failed': { companyId: EntityId; sector: string };
   'company.gradeChanged': { companyId: EntityId; from: CreditGrade; to: CreditGrade };
   'company.hired': { companyId: EntityId; count: number };

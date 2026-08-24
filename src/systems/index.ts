@@ -10,6 +10,7 @@ import './creditRisk.js';
 import './treasury.js';
 import './lodSystem.js';
 import './accounting.js';
+import './demography.js';
 import './metrics.js';
 
 export { PHASE, orderedSystems, systems, defineSystem, type System } from './system.js';

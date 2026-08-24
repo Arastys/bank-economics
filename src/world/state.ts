@@ -101,8 +101,28 @@ export interface SimConfig {
   savingsRateSensitivity: number;
   /** How quickly people' smoothed income follows actual receipts. */
   incomeSmoothing: number;
-  /** Share of the population in the labour market. */
+  /** Share of the working-age population in the labour market. */
   labourParticipation: number;
+  /** Years from birth to joining the workforce. */
+  yearsAsChild: number;
+  /** Years spent of working age. */
+  yearsWorking: number;
+  /** Years from leaving the workforce to dying. */
+  yearsRetired: number;
+  /**
+   * How strongly prosperity feeds through to the birth rate.
+   *
+   * Births run at one per worker per working lifetime multiplied by
+   * `prosperity ^ this`, so at zero the population is exactly stationary and
+   * above zero a richer economy grows. This is the opposite of the real
+   * demographic transition, where richer countries have fewer children. It is
+   * the version where prosperity compounds instead of quietly shrinking the
+   * workforce through the best decades, which is the better game and the
+   * worse history.
+   */
+  fertilityProsperity: number;
+  /** How fast the standard of living prosperity is judged against moves. */
+  prosperityMemory: number;
   /** Employment rate at which the labour market bids wages up. */
   neutralTightness: number;
   /** How much of last month's inflation firms pass into pay. */
@@ -256,7 +276,7 @@ export interface WorldState {
   config: SimConfig;
 }
 
-export const WORLD_VERSION = 5;
+export const WORLD_VERSION = 6;
 
 export const DEFAULT_CONFIG: SimConfig = {
   applicationValidityDays: 14,
@@ -283,6 +303,11 @@ export const DEFAULT_CONFIG: SimConfig = {
   savingsRateSensitivity: 0,
   incomeSmoothing: 0.15,
   labourParticipation: 0.96,
+  yearsAsChild: 18,
+  yearsWorking: 49,
+  yearsRetired: 15,
+  fertilityProsperity: 1.5,
+  prosperityMemory: 0.0008,
   neutralTightness: 0.97,
   wageIndexation: 0.6,
   wageTightnessResponse: 0.3,

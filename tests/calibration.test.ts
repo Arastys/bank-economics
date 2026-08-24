@@ -174,6 +174,8 @@ describe('parameter definitions', () => {
       'PRICE_HISTORY',
       // Months in a year, not a knob: it is tied to payReviewMonth being 1-12.
       'PAY_VINTAGES',
+      // Also months in a year. The calendar is not a design decision.
+      'MONTHS_PER_YEAR',
       'REVIEW_CYCLE',
       'SWEEP_INTERVAL',
       'COHORT_CHURN',

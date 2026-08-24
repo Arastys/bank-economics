@@ -6,10 +6,11 @@ import { DEFAULT_CONFIG } from '../src/world/state.js';
 import { pounds, type Money } from '../src/core/money.js';
 import { spendable } from '../src/world/transfer.js';
 
-/** A stand-in pool: `heads` people, `working` of them earning `income` between them. */
+/** A stand-in pool: `heads` adults, `working` of them earning `income` between them. */
 function pool(heads: number, working: number, income: Money, savings: Money) {
   const view = {
     count: heads,
+    children: 0,
     employed: working,
     incomeRate: income,
     propensityToConsume: 0.95,

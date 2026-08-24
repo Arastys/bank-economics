@@ -19,6 +19,7 @@ export const PHASE = {
   TREASURY: 800,
   LOD: 850,
   ACCOUNTING: 900,
+  DEMOGRAPHY: 920,
   METRICS: 950,
   CLOSE: 980,
 } as const;

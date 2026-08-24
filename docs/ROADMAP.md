@@ -216,6 +216,42 @@ back as abruptly when rates fall. It gave the committee enormous apparent grip
 wrecking the economy to get it, at 21% unemployment. Worth remembering the next
 time a stabiliser looks powerful.
 
+## People have ages; firms still do not
+
+The population used to be a constant: one number per pool, everybody of
+working age for ever. Labour supply is the hard limit on output and the thing
+wages are bid against, so nothing the economy did could move it. People are now
+born, spend `yearsAsChild` growing up, `yearsWorking` in the labour market and
+`yearsRetired` before dying, and births run at one per worker per working
+lifetime scaled by `prosperity ^ fertilityProsperity` -- so at zero the
+population is exactly stationary and above it a richer economy grows. Over
+thirty years: 0.0% at an elasticity of zero, -2.7% at 1.5, +5.2% at 4.
+
+Money needs no special handling for inheritance. A pool holds one account
+between its members, so a death leaves the balance where it is and fewer people
+to share it. The survivors inherit and the ledger never sees a penny move.
+
+Two things this cost, both worth recording because both looked like demographic
+effects and neither was:
+
+**A monetary shock dressed as a demographic one.** Opening savings were sized
+per head from a figure calibrated when every person in the model was a worker.
+Adding children and pensioners scaled it by the new headcount and minted 67%
+more money against exactly the same output -- opening deposits went from
+£4.8bn to £8.0bn, demand ran at 721,000 units against output of 473,000, and
+inflation volatility went from 4.2 to 39.0. The per-head figures are a
+calibrated aggregate, not a per-head truth, and they now scale with the
+working-age count.
+
+**Children budgeting as adults.** `poolBudget` split a pool by total headcount,
+so each child defended a savings cushion of its own. Since a shortfall is
+floored at zero rather than netted off, a hundred thousand of those floors is
+demand out of nowhere. Children are mouths, not decisions: they eat from the
+same budget as the adults they live with, and the split is over adults.
+
+Firms still have no demography, and that remains the largest single term in
+the score -- 40.6 of 66.9, untouched by every parameter that describes it.
+
 ## Known open problem
 
 Splitting a cohort into several identical cohorts changes aggregate outcomes.

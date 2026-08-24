@@ -31,6 +31,8 @@ export const PARAMETERS: Parameter[] = [
   { key: 'savingsBufferDays', label: 'Target savings buffer (days)', min: 30, max: 600, step: 20 },
   { key: 'savingsAdjustment', label: 'Savings adjustment speed', min: 0.001, max: 0.05, step: 0.003 },
   { key: 'savingsRateSensitivity', label: 'Saving response to rates', min: 0, max: 15, step: 1 },
+  { key: 'fertilityProsperity', label: 'Births response to prosperity', min: 0, max: 6, step: 0.5 },
+  { key: 'prosperityMemory', label: 'How fast the standard of living resets', min: 0.0001, max: 0.01, step: 0.0005 },
   { key: 'incomeSmoothing', label: 'Income smoothing', min: 0.03, max: 0.5, step: 0.03 },
   { key: 'neutralTightness', label: 'Neutral labour tightness', min: 0.85, max: 1.0, step: 0.02 },
   { key: 'wageIndexation', label: 'Wage indexation', min: 0, max: 1, step: 0.1 },

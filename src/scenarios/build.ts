@@ -33,6 +33,21 @@ const GOVERNMENT_ID = 'gov:hmt';
  * liability of the bank holding it, and every loan on a bank's books is a debt
  * somebody actually owes. Those are the identities the invariant tests check.
  */
+/**
+ * The children and pensioners a working-age population of this size carries in
+ * a stationary population: everybody spends `yearsAsChild` then
+ * `yearsWorking` then `yearsRetired`, so the bands sit in exactly that ratio.
+ * At 18/49/15 that is 22% children, 60% working, 18% retired, which is within
+ * a point of the United Kingdom.
+ */
+function childrenOf(workingAge: number): number {
+  return Math.round((workingAge * DEFAULT_CONFIG.yearsAsChild) / DEFAULT_CONFIG.yearsWorking);
+}
+
+function retiredOf(workingAge: number): number {
+  return Math.round((workingAge * DEFAULT_CONFIG.yearsRetired) / DEFAULT_CONFIG.yearsWorking);
+}
+
 export function buildWorld(spec: ScenarioSpec): WorldState {
   registerBuiltinInstruments();
 
@@ -184,7 +199,7 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
       name: `People (${cohortSpec.region}${cohortSpec.banksWithPlayer ? ', your customers' : ''})`,
       createdOn: startTick,
       memberKind: 'person',
-      count: cohortSpec.count,
+      count: cohortSpec.count + childrenOf(cohortSpec.count) + retiredOf(cohortSpec.count),
       nextMemberIndex: 0,
       bankId: cohortSpec.banksWithPlayer ? PLAYER_BANK_ID : OTHER_BANKS_ID,
       archetype: {
@@ -197,6 +212,15 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
       },
       pool: {
         employed: Math.round(cohortSpec.count * cohortSpec.employmentRate),
+        // The scenario's headcount is the working-age population: it is the
+        // number the labour market and every wage flow were calibrated
+        // against. Children and pensioners are added around it in the shares a
+        // stationary population settles at, so switching demography on does
+        // not hand the labour market a shock on day one.
+        workingAge: cohortSpec.count,
+        children: childrenOf(cohortSpec.count),
+        retired: retiredOf(cohortSpec.count),
+        prosperityReference: 0,
         lastIncome: 0,
         incomeRate: round(
           cohortSpec.count * cohortSpec.employmentRate * cohortSpec.meanWage * BUSINESS_DAY_SHARE,
@@ -302,8 +326,14 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
   spec.personCohorts.forEach((cohortSpec, index) => {
     const cohort = personCohorts[index]!;
     const bankId = cohort.bankId!;
-    const savings = scale(cohortSpec.savingsPerPerson, cohort.count);
-    const debt = scale(cohortSpec.debtPerPerson, cohort.count);
+    // Against the working-age count, not the whole population. These per-head
+    // figures are a calibrated aggregate from when everybody in the model was
+    // a worker, and scaling them by a headcount that now includes children
+    // would mint an opening stock of savings that never existed -- 67% more
+    // money chasing exactly the same output, which is a monetary shock rather
+    // than a demographic one.
+    const savings = scale(cohortSpec.savingsPerPerson, cohortSpec.count);
+    const debt = scale(cohortSpec.debtPerPerson, cohortSpec.count);
     openWithCapital(
       ledger,
       cohort.id,
@@ -466,7 +496,7 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
   let labourForce = 0;
   for (const cohort of companyCohorts) potential += (cohort.pool.employees ?? 0) * ((cohort.archetype as { meanProductivity: number }).meanProductivity ?? 0);
   for (const customer of customers) potential += customer.company.employees * customer.company.productivity;
-  for (const cohort of personCohorts) labourForce += cohort.count;
+  for (const cohort of personCohorts) labourForce += cohort.pool.workingAge ?? cohort.count;
 
   world.economy.potentialOutput = potential;
   world.economy.outputUnits = potential;
