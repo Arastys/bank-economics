@@ -63,8 +63,17 @@ export interface SimConfig {
   priceElasticity: number;
   /** Share of takings a comfortable firm puts back into capacity. */
   investmentRate: number;
-  /** Daily share of savings households run down. */
-  dissavingRate: number;
+  /**
+   * The buffer of savings households aim to hold, in days of income.
+   *
+   * Without a target, a fixed saving rate is a permanent leak: households put
+   * a share of every wage packet into a pot and only ever trickle it back out,
+   * so the firm sector loses that much cash a day for ever. With one, saving
+   * is the gap to the buffer, which is zero once the buffer is full.
+   */
+  savingsBufferDays: number;
+  /** Daily share of the gap to the buffer households close. */
+  savingsAdjustment: number;
   /** How quickly households' smoothed income follows actual receipts. */
   incomeSmoothing: number;
   /** Share of the population in the labour market. */
@@ -211,7 +220,7 @@ export interface WorldState {
   config: SimConfig;
 }
 
-export const WORLD_VERSION = 1;
+export const WORLD_VERSION = 2;
 
 export const DEFAULT_CONFIG: SimConfig = {
   applicationValidityDays: 14,
@@ -232,7 +241,8 @@ export const DEFAULT_CONFIG: SimConfig = {
   minMarkup: -0.05,
   priceElasticity: 2.5,
   investmentRate: 0.15,
-  dissavingRate: 0.0001,
+  savingsBufferDays: 180,
+  savingsAdjustment: 0.01,
   incomeSmoothing: 0.15,
   labourParticipation: 0.96,
   neutralTightness: 0.97,

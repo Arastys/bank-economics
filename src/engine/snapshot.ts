@@ -1,4 +1,4 @@
-import { WORLD_VERSION, type WorldState } from '../world/state.js';
+import { DEFAULT_CONFIG, WORLD_VERSION, type WorldState } from '../world/state.js';
 
 export interface Snapshot {
   version: number;
@@ -30,6 +30,20 @@ export type Migration = (world: WorldState) => WorldState;
 
 /** Migrations by the version they upgrade *from*. */
 export const migrations = new Map<number, Migration>();
+
+/**
+ * Households used to save a fixed share of income and trickle it back out at
+ * `dissavingRate`, which never balanced. They now save towards a buffer.
+ * An old save has no buffer, so it takes the current default and starts from
+ * whatever savings it had.
+ */
+migrations.set(1, (world) => {
+  const config = world.config as unknown as Record<string, unknown>;
+  delete config.dissavingRate;
+  config.savingsBufferDays = DEFAULT_CONFIG.savingsBufferDays;
+  config.savingsAdjustment = DEFAULT_CONFIG.savingsAdjustment;
+  return world;
+});
 
 export function load(json: string): WorldState {
   const snapshot = JSON.parse(json) as Snapshot;

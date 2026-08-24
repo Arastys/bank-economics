@@ -69,17 +69,17 @@ These are the ones the boundaries were built for.
 - **A different front end.** The engine has no DOM dependency; the dashboard is
   the only thing that would be replaced.
 
-## The economy does not survive a decade
+## The economy did not survive a decade
 
-Everything here has been calibrated on three-year runs, and the model falls
-apart after about four. Run the default configuration out and unemployment
-reaches 19% by year six and 38% by year ten; the bank's loan book drains to
-nothing by year seven and its capital goes negative shortly after.
+Everything was calibrated on three-year runs, and the model fell apart after
+about four: unemployment reached 19% by year six and 38% by year ten, the
+bank's loan book drained to nothing by year seven and its capital went
+negative shortly after. It took two independent defects, one hiding the other.
 
-The cause is that **firms have no margin objective**. They set prices from how
-fast stock is turning over and nothing else, so there is nothing tying a price
-to what the thing cost to make. Pay is indexed to inflation and to how tight
-the labour market is, and can therefore rise straight through the price:
+**Firms had no margin objective.** They set prices from how fast stock was
+turning over and nothing else, so nothing tied a price to what the thing cost
+to make. Pay is indexed to inflation and to how tight the labour market is, and
+could therefore rise straight through the price:
 
 | date | avg price | unit wage cost | gross margin |
 | --- | ---: | ---: | ---: |
@@ -88,21 +88,49 @@ the labour market is, and can therefore rise straight through the price:
 | 2027-07 | £79.32 | £79.97 | −0.8% |
 | 2028-01 | £82.55 | £86.16 | −4.4% |
 
-Once the firm sector is selling below cost its earnings are negative by
-construction, every credit application fails the affordability test — 15,776
+Once the firm sector was selling below cost its earnings were negative by
+construction, every credit application failed the affordability test — 15,776
 declines for "no earnings to service the debt" over eight years — and the
-credit market closes. Without credit, firms cannot fund payroll, they shed
-staff, demand falls and prices fall further.
+credit market closed. Without credit, firms could not fund payroll, they shed
+staff, demand fell and prices fell further.
 
-Note this is the *second* spiral in the same place. Wage indexation was added
-to stop a deflationary wage-price spiral, and downward wage rigidity was added
-to stop that fix spiralling the other way. Both were right; together they
-leave nothing defending the margin.
+This was the *second* spiral in the same place. Wage indexation was added to
+stop a deflationary wage-price spiral, and downward wage rigidity was added to
+stop that fix spiralling the other way. Both were right; together they left
+nothing defending the margin. Firms now price against unit cost
+(`targetMarkup`, `costAnchorWeight`), with the trading signal deciding how fast
+they move rather than deciding the price outright.
 
-The fix is a pricing rule that knows what production costs — a target markup
-that firms move towards, with the sell-through signal deciding how fast rather
-than deciding the price outright. `grossMargin` is now recorded monthly so any
-attempt can be measured.
+**Households saved for ever.** They spent a fixed share of income and ran
+savings down at a flat daily rate. Those two flows do not balance: with a 95%
+propensity and a 0.01% daily drawdown, the savings stock has to reach five
+hundred days of income before saving stops. Until then the firm sector handed
+over more cash than it took back, every day. Firm cash fell from £2.9bn to
+£90m over eight years while household deposits rose from £4.8bn to £8.2bn —
+the economy did not lose money, it just piled it where nothing spent it.
+
+Nothing in a three-year run showed this. The stock takes a decade to bite, and
+the margin defect was masking it: a firm sector selling below cost was handing
+its losses back to households as purchasing power, which is a leak in the
+opposite direction. Fixing the margin made the saving leak visible, and
+unemployment briefly got *worse* — 19% rather than 28% — which is how the
+second defect was found.
+
+Households now save towards a buffer of `savingsBufferDays` days of income and
+close the gap to it at `savingsAdjustment` a day, so the saving flow is zero
+once the buffer is full and negative above it.
+
+Eight-year runs, two seeds, each fix added in turn:
+
+| | gross margin | unemployment | inflation | score |
+| --- | ---: | ---: | ---: | ---: |
+| neither | 0.4% | 28.2% | 2.2% | 979 |
+| cost anchor only | 7.0% | 19.0% | −3.0% | 354 |
+| both | 6.7% | 3.5% | 4.7% | 82 |
+
+Lower is better on score. `tests/consumption.test.ts` runs the economy for ten
+years and fails if the firm sector drains or unemployment runs away, so this
+particular hole cannot reopen unnoticed.
 
 ## Known open problem
 

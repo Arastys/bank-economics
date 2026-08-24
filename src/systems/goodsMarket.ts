@@ -166,10 +166,12 @@ function collectBuyers(world: WorldState, ledger: LedgerState, firms: FirmView[]
         household.lastIncome * world.config.incomeSmoothing,
     );
     const savings = spendable(world, ledger, household.id);
-    const wanted = round(
-      household.propensityToConsume * household.incomeRate + world.config.dissavingRate * savings,
+    const budget = consumptionBudget(
+      household.propensityToConsume,
+      household.incomeRate,
+      savings,
+      world.config,
     );
-    const budget = min(wanted, atLeastZero(savings));
     if (budget > 0) buyers.push({ id: household.id, budget, contra: AC.CONSUMPTION });
   }
 
@@ -183,6 +185,33 @@ function collectBuyers(world: WorldState, ledger: LedgerState, firms: FirmView[]
   }
 
   return buyers;
+}
+
+/**
+ * What a household puts on the counter today.
+ *
+ * Saving is the gap to a target buffer, not a fixed share of income. A fixed
+ * share never stops: households hold back the same slice of every wage packet
+ * and only trickle the pot back out, so the firm sector hands over more cash
+ * than it takes, every day, for ever. Nothing in a year or two of trading
+ * shows it -- it took eight simulated years for firm cash to fall from £2.9bn
+ * to £90m and unemployment to reach 61% with nothing else wrong.
+ *
+ * With a buffer, saving is zero once the buffer is full, and a household
+ * sitting on more than it wants spends the excess down.
+ */
+export function consumptionBudget(
+  propensityToConsume: number,
+  incomeRate: Money,
+  savings: Money,
+  config: SimConfig,
+): Money {
+  const buffer = incomeRate * config.savingsBufferDays;
+  const wanted = round(
+    propensityToConsume * incomeRate + config.savingsAdjustment * (savings - buffer),
+  );
+  // Nobody spends money they do not have, and nobody spends less than nothing.
+  return min(atLeastZero(wanted), atLeastZero(savings));
 }
 
 /**

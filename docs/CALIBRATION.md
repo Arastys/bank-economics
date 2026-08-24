@@ -162,14 +162,19 @@ entry or exit they simply shrink and shed staff. At 0.09 unemployment reaches
 
 ## Three years is not long enough
 
-Every guard rail and every calibration in this repository runs for three years,
-and the model is fine for three years. It is not fine for ten:
+Every guard rail and every calibration in this repository ran for three years,
+and the model was fine for three years. It was not fine for ten:
 
 | horizon | gross margin | unemployment | insolvency |
 | --- | ---: | ---: | ---: |
 | 3 years | 2.9% | 4.0% | 4.0% |
 | 6 years | 0.2% | 19.5% | 4.5% |
 | 10 years | 1.4% | 37.6% | 5.3% |
+
+Two defects were hiding behind that horizon — firms with no margin objective,
+and households saving into a pot nothing spent — and both are written up in
+`docs/ROADMAP.md`. Neither was visible at three years, and the second was not
+visible until the first was fixed.
 
 A short horizon is not a cheap approximation of a long one. It is a different
 question, and it was answering the easy one. The campaign presets run to twenty
