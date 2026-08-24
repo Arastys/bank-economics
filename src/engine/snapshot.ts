@@ -127,6 +127,21 @@ migrations.set(6, (world) => {
   return world;
 });
 
+/**
+ * Firms have demography now. An old save has a latent population that could
+ * neither enter nor fail, so it gets the knobs that govern both; the pools
+ * pick up their remembered margin on the first month they are asked for it,
+ * which reads as exact replacement until they have something to compare to.
+ */
+migrations.set(7, (world) => {
+  const config = world.config as unknown as Record<string, unknown>;
+  config.firmExitRate = DEFAULT_CONFIG.firmExitRate;
+  config.firmExitCyclicality = DEFAULT_CONFIG.firmExitCyclicality;
+  config.firmEntryElasticity = DEFAULT_CONFIG.firmEntryElasticity;
+  config.firmMarginMemory = DEFAULT_CONFIG.firmMarginMemory;
+  return world;
+});
+
 export function load(json: string): WorldState {
   const snapshot = JSON.parse(json) as Snapshot;
   if (typeof snapshot?.version !== 'number' || !snapshot.world) {

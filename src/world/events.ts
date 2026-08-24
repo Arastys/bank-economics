@@ -51,6 +51,12 @@ export interface GameEvents {
 
   'company.founded': { companyId: EntityId; sector: string };
   'people.populationChanged': { births: number; deaths: number };
+  /**
+   * Firms entering and failing inside the pools, aggregated over the month.
+   * Latent firms have no individual identity, so there is no id to report --
+   * `company.founded` and `company.failed` stay for firms simulated in full.
+   */
+  'firms.populationChanged': { births: number; deaths: number };
   'company.failed': { companyId: EntityId; sector: string };
   'company.gradeChanged': { companyId: EntityId; from: CreditGrade; to: CreditGrade };
   'company.hired': { companyId: EntityId; count: number };

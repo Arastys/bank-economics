@@ -37,6 +37,34 @@ export interface SimConfig {
    * around the sector average. Zero makes every firm identical.
    */
   firmQualitySpread: number;
+  /**
+   * The share of latent firms that fail in a year, before the cycle.
+   *
+   * This is the economy-wide insolvency rate the model is trying to produce:
+   * resolved borrowers fail on their own probability of default, and everybody
+   * else -- the overwhelming majority, who have never borrowed from the player
+   * -- fails at this rate. Set from the UK company insolvency rate.
+   */
+  firmExitRate: number;
+  /**
+   * How much a downturn raises failures.
+   *
+   * Multiplies the exit rate by `1 - this * outputGap`, so at 2 a two-point
+   * negative output gap raises failures by a twentieth of themselves... a
+   * bust kills firms, a boom keeps them alive. Zero makes exit acyclical.
+   */
+  firmExitCyclicality: number;
+  /**
+   * How strongly entry answers profit.
+   *
+   * Entry is the exit rate times `1 + this * (margin - what the cohort is used
+   * to)`, so at zero entry exactly replaces exit whatever the economy is
+   * doing, and the firm population is stationary. Above zero, a sector earning
+   * more than it is used to attracts firms and one earning less loses them.
+   */
+  firmEntryElasticity: number;
+  /** How fast a cohort's remembered margin follows the actual one. */
+  firmMarginMemory: number;
   /** Sell-through firms aim for. Above it they raise prices, below they cut. */
   targetSellThrough: number;
   /** Days of stock a firm is comfortable holding. */
@@ -286,7 +314,7 @@ export interface WorldState {
   config: SimConfig;
 }
 
-export const WORLD_VERSION = 7;
+export const WORLD_VERSION = 8;
 
 export const DEFAULT_CONFIG: SimConfig = {
   applicationValidityDays: 14,
@@ -299,6 +327,10 @@ export const DEFAULT_CONFIG: SimConfig = {
   priceAdjustment: 0.006,
   hiringAdjustment: 0.02,
   firmQualitySpread: 0.18,
+  firmExitRate: 0.007,
+  firmExitCyclicality: 2,
+  firmEntryElasticity: 1.5,
+  firmMarginMemory: 0.02,
   targetSellThrough: 0.95,
   targetStockDays: 8,
   demandPriceWeight: 0.7,

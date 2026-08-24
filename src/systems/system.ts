@@ -20,6 +20,7 @@ export const PHASE = {
   LOD: 850,
   ACCOUNTING: 900,
   DEMOGRAPHY: 920,
+  FIRM_DEMOGRAPHY: 930,
   METRICS: 950,
   CLOSE: 980,
 } as const;
