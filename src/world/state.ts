@@ -78,6 +78,18 @@ export interface SimConfig {
   arrearsLimit: number;
   /** What a forced sale of a failed firm's assets loses against book value. */
   liquidationHaircut: number;
+  /**
+   * How much the state of the economy moves that. Recovery is procyclical:
+   * in a slump the buyers are short of money and several firms are selling
+   * the same assets at once, so they fetch less.
+   */
+  liquidationCyclicality: number;
+  /** Spread of outcomes between one liquidation and the next. */
+  liquidationVariance: number;
+  /** How much better an orderly sale does than a forced one. */
+  workoutHaircutFactor: number;
+  /** How much asset-heavy sectors recover above asset-light ones. */
+  liquidationCapitalIntensityBenefit: number;
   /** Corporation tax rate applied at year end. */
   corporationTaxRate: number;
   /** Regulatory minimums, reported but not yet enforced. */
@@ -211,6 +223,10 @@ export const DEFAULT_CONFIG: SimConfig = {
   maxNewApplicationsPerDay: 8,
   arrearsLimit: 3,
   liquidationHaircut: 0.4,
+  liquidationCyclicality: 2.5,
+  liquidationVariance: 0.1,
+  workoutHaircutFactor: 0.5,
+  liquidationCapitalIntensityBenefit: 0.08,
   corporationTaxRate: 0.25,
   minimumCapitalRatio: 0.08,
   minimumLiquidityRatio: 1.0,

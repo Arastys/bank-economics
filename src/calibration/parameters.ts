@@ -36,6 +36,9 @@ export const PARAMETERS: Parameter[] = [
   { key: 'neutralRealRate', label: 'Neutral real rate', min: -0.01, max: 0.03, step: 0.005 },
   { key: 'lossGivenDefault', label: 'Loss given default', min: 0.2, max: 0.8, step: 0.05 },
   { key: 'liquidationHaircut', label: 'Liquidation haircut', min: 0.1, max: 0.8, step: 0.05 },
+  { key: 'liquidationCyclicality', label: 'Recovery procyclicality', min: 0, max: 6, step: 0.5 },
+  { key: 'liquidationVariance', label: 'Recovery variance', min: 0, max: 0.3, step: 0.02 },
+  { key: 'workoutHaircutFactor', label: 'Orderly sale advantage', min: 0.1, max: 1, step: 0.1 },
   { key: 'cohortApplicationRate', label: 'Credit demand rate', min: 0.0001, max: 0.003, step: 0.0002 },
 ];
 

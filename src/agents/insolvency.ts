@@ -1,4 +1,5 @@
 import { ZERO, add, min, scale, sub, type Money } from '../core/money.js';
+import { identityRng, normal } from '../core/rng.js';
 import type { Day } from '../core/time.js';
 import { AC, type AccountCode } from '../ledger/accounts.js';
 import { credit, debit, naturalBalance, post, type LedgerState, type Posting } from '../ledger/ledger.js';
@@ -117,13 +118,47 @@ export function sellAssets(
   return raised;
 }
 
+/**
+ * What this particular sale will lose against book value.
+ *
+ * Three things move it. The cycle: in a healthy economy buyers have money and
+ * are not all selling at once, so assets fetch more, and creditors of the few
+ * firms that do fail get most of it back. The sector: machinery and premises
+ * hold their value in a way that shop fittings do not. And luck, because one
+ * liquidation is not the next.
+ *
+ * An orderly sale by a solvent firm does better than a fire sale by a dead
+ * one, which is what makes forbearance worth something.
+ */
+export function realisedHaircut(
+  world: WorldState,
+  companyId: EntityId,
+  tick: Day,
+  kind: 'workout' | 'windUp',
+): number {
+  const { config } = world;
+  const company = world.entities[companyId];
+  const sector = company?.kind === 'company' ? world.sectors[company.sector] : undefined;
+
+  const cyclical = -config.liquidationCyclicality * world.economy.outputGap;
+  const sectoral =
+    -config.liquidationCapitalIntensityBenefit * ((sector?.capitalIntensity ?? 0.7) - 0.7);
+  // Seeded on who and when, so the same failure always plays out the same way
+  // however many other firms fail on the same tick.
+  const luck = normal(identityRng(world.seed, `liquidation:${companyId}:${tick}`), 0, config.liquidationVariance);
+
+  const distressed = config.liquidationHaircut + cyclical + sectoral + luck;
+  const haircut = kind === 'workout' ? distressed * config.workoutHaircutFactor : distressed;
+  return Math.max(0.02, Math.min(0.95, haircut));
+}
+
 /** Wind a firm up: everything goes, and what will not sell is written off. */
 export function liquidateAssets(
   world: WorldState,
   ledger: LedgerState,
   tick: Day,
   companyId: EntityId,
-  haircut = world.config.liquidationHaircut,
+  haircut = realisedHaircut(world, companyId, tick, 'windUp'),
 ): Money {
   return sellAssets(world, ledger, tick, companyId, { writeOffRemainder: true, haircut });
 }
@@ -138,7 +173,7 @@ export function raiseCash(
   tick: Day,
   companyId: EntityId,
   needed: Money,
-  haircut = world.config.liquidationHaircut,
+  haircut = realisedHaircut(world, companyId, tick, 'workout'),
 ): Money {
   if (needed <= 0) return ZERO;
   return sellAssets(world, ledger, tick, companyId, { target: needed, writeOffRemainder: false, haircut });
