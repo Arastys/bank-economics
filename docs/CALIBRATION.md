@@ -266,10 +266,12 @@ settling excursion; the last is where it stands now.
 | corporate insolvency | 0.75% | 41.7 | **0.0** |
 | **total** | | **69.5** | **59.6** |
 
-Read the total with care. The median run scores 39.5 against that mean of
-59.6, because the bank ends with negative equity in 2 seeds of 24 and a bank
-with no equity left reports an enormous return on it. Two runs are dragging
-every mean in the table.
+Read the total with care. The bank fails to survive 11 runs in 24 -- equity
+goes non-positive at some monthly sample -- and 7 end negative outright, so
+nearly half the sample carries a flat 50-point insolvency penalty and reports
+an enormous return on the equity it has left. The median run scores 39.5
+against that mean of 59.6. Every mean in the table is being dragged by runs in
+which the player's bank died.
 
 What moved and why, in order:
 

@@ -183,11 +183,12 @@ baseline scores 67.8, and these are what it is made of:
   point. Restraining demand here changes output rather than prices. The
   consumption channel is built and switched off for that reason. See
   `docs/ROADMAP.md`.
-- **The bank is the largest thing wrong with the model.** 36% return on equity
-  against a 12% target, and worse, it ends with negative equity in 2 seeds out
-  of 24 — which is also where the headline figure comes from, since a bank with
-  no equity left reports a spectacular return on it. Nothing about how it prices
-  or provisions was calibrated for an economy that grows, and it now grows.
+- **The bank is the largest thing wrong with the model.** It fails to survive
+  11 calibration runs in 24, and 7 end with equity negative outright — which is
+  also where the headline 36% return on equity comes from, since a bank with no
+  equity left reports a spectacular return on it. It runs one frozen policy for
+  ten years, because the calibration harness issues no commands, so nothing
+  about how it prices or provisions ever adapts to the economy it is in.
 - **The economy runs slightly hot** — 2.2% unemployment against a 4.5% target,
   worth 7.7 of the score. Damping the cycle removed the busts and the labour
   block has never been retuned against an economy without them; every figure in

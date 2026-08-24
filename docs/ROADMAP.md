@@ -19,15 +19,24 @@ happened is worth reading before touching anything:
 
 And then the thing that swamps all of it:
 
-- **Return on equity, 25.0 of the 59.6.** 36.3% against a 12% target, and the
-  mean is not the story. The median run scores 39.5 against a mean of 59.6,
-  because **the bank ends with negative equity in 2 of 24 seeds** -- and a bank
-  with almost no equity left reports a spectacular return on it, which is where
-  150% and 71% come from. This is the largest thing wrong with the model and
-  it is new: capital deepening gave the economy growth, growth gave the bank a
-  bigger book, and nothing about how the bank prices or provisions was ever
-  calibrated for that. Fix the insolvencies before reading anything else on
-  this card, because two runs are dragging every mean on it.
+- **The bank does not survive 11 runs in 24.** `survived` requires equity to
+  stay positive at every monthly sample; it fails in 11, and 7 runs end with
+  equity negative outright. That is 50 points of flat insolvency penalty on
+  nearly half the sample, and it is why return on equity reads 36.3% against a
+  12% target -- a bank with almost no equity left reports a spectacular return
+  on it. The median run scores 39.5 against a mean of 59.6.
+
+  Nothing here is reachable by the sweep. `depositRate`, `lendingSpread`,
+  `maxDebtServiceRatio` and `targetCapitalRatio` all live in `BankPolicy` on
+  the bank entity, and the calibration harness issues no commands at all, so
+  the bank runs one frozen policy for ten years while the economy moves under
+  it. Policy leverage is enormous: a deposit rate of 3.1% instead of 2.1% kills
+  the bank in 24 seeds out of 24. `targetCapitalRatio` moved from 0.12 to 0.16
+  changes nothing whatsoever, because the constraint never binds -- worth
+  checking on its own.
+
+  Fix this before reading anything else on the card, and before any tuning
+  pass: it corrupts both the objective and its error bars.
 
 **The business cycle.** Its amplitude was mostly one defect — every firm
 settling pay on the same tick — and volatility has gone from 15.8 to 1.9.
