@@ -32,7 +32,7 @@ export type Migration = (world: WorldState) => WorldState;
 export const migrations = new Map<number, Migration>();
 
 /**
- * Households used to save a fixed share of income and trickle it back out at
+ * People used to save a fixed share of income and trickle it back out at
  * `dissavingRate`, which never balanced. They now save towards a buffer.
  * An old save has no buffer, so it takes the current default and starts from
  * whatever savings it had.
@@ -76,6 +76,19 @@ migrations.set(3, (world) => {
     if (entity.kind !== 'company') continue;
     entity.payReviewMonth = (n++ % 12) + 1;
     entity.wageIndexAtReview = 1;
+  }
+  return world;
+});
+
+/**
+ * `household` became `person`. The entity always was one -- it earned one
+ * wage, and the labour force was a straight count of them -- so this renames
+ * the discriminator and changes nothing else.
+ */
+migrations.set(4, (world) => {
+  for (const entity of Object.values(world.entities) as { kind: string; memberKind?: string }[]) {
+    if (entity.kind === 'household') entity.kind = 'person';
+    if (entity.memberKind === 'household') entity.memberKind = 'person';
   }
   return world;
 });

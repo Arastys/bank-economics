@@ -6,7 +6,7 @@ import type { EntityId } from './types.js';
 /**
  * Where an entity keeps its spendable money.
  *
- * Firms and households bank with someone; banks, the central bank and the
+ * Firms and people bank with someone; banks, the central bank and the
  * state settle in reserves. Unbanked parties fall back to notes.
  */
 export function walletOf(world: WorldState, id: EntityId): Wallet {
@@ -17,7 +17,7 @@ export function walletOf(world: WorldState, id: EntityId): Wallet {
     case 'government':
       return reserveWallet(id);
     case 'company':
-    case 'household':
+    case 'person':
       return entity.bankId ? depositWallet(id, entity.bankId) : cashWallet(id);
     case 'cohort':
       // A pool banks somewhere -- usually the aggregate rival bank. Money
@@ -33,7 +33,7 @@ export function walletOf(world: WorldState, id: EntityId): Wallet {
 export function bankOf(world: WorldState, id: EntityId): EntityId | undefined {
   const entity = world.entities[id];
   if (!entity) return undefined;
-  return entity.kind === 'company' || entity.kind === 'household' || entity.kind === 'cohort'
+  return entity.kind === 'company' || entity.kind === 'person' || entity.kind === 'cohort'
     ? entity.bankId
     : undefined;
 }

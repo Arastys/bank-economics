@@ -23,7 +23,7 @@ export interface CompanyCohortSpec {
   debtPerFirm: Money;
 }
 
-export interface HouseholdCohortSpec {
+export interface PersonCohortSpec {
   id?: string;
   region: string;
   creditGrade: CreditGrade;
@@ -32,8 +32,8 @@ export interface HouseholdCohortSpec {
   wageSigma: number;
   meanPropensityToConsume: number;
   employmentRate: number;
-  savingsPerHousehold: Money;
-  debtPerHousehold: Money;
+  savingsPerPerson: Money;
+  debtPerPerson: Money;
   /** Set to bank this cohort with the player rather than the rest of the market. */
   banksWithPlayer?: boolean;
 }
@@ -76,7 +76,7 @@ export interface ScenarioSpec {
   };
 
   companyCohorts: CompanyCohortSpec[];
-  householdCohorts: HouseholdCohortSpec[];
+  personCohorts: PersonCohortSpec[];
 
   /** Corporate borrowers the player already banks, materialised at the start. */
   existingCorporateCustomers: number;

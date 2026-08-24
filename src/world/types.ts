@@ -3,7 +3,7 @@ import type { Day } from '../core/time.js';
 
 export type EntityId = string;
 
-export type EntityKind = 'bank' | 'company' | 'household' | 'centralBank' | 'government' | 'cohort';
+export type EntityKind = 'bank' | 'company' | 'person' | 'centralBank' | 'government' | 'cohort';
 
 /**
  * Level of detail. `resolved` entities are simulated individually every tick;
@@ -117,8 +117,8 @@ export interface Company extends EntityBase {
   applicationId?: string;
 }
 
-export interface Household extends EntityBase {
-  kind: 'household';
+export interface Person extends EntityBase {
+  kind: 'person';
   detail: 'resolved';
   region: RegionId;
   employerId?: EntityId;
@@ -132,7 +132,7 @@ export interface Household extends EntityBase {
   pdAnnual: number;
   /** Money received on the most recent tick. */
   lastIncome: Money;
-  /** Smoothed daily income. Households budget from this, not from payday. */
+  /** Smoothed daily income. People budget from this, not from payday. */
   incomeRate: Money;
 }
 
@@ -201,7 +201,7 @@ export interface CompanyArchetype {
   meanPrice: Money;
 }
 
-export interface HouseholdArchetype {
+export interface PersonArchetype {
   region: RegionId;
   creditGrade: CreditGrade;
   meanWage: Money;
@@ -213,10 +213,10 @@ export interface HouseholdArchetype {
 export interface Cohort extends EntityBase {
   kind: 'cohort';
   detail: 'cohort';
-  memberKind: 'company' | 'household';
+  memberKind: 'company' | 'person';
   /** Latent members still inside the pool. */
   count: number;
-  archetype: CompanyArchetype | HouseholdArchetype;
+  archetype: CompanyArchetype | PersonArchetype;
   /**
    * Aggregate non-monetary state for the latent members: headcount, stock on
    * hand, and so on. Money always lives in the ledger, never here.
@@ -228,13 +228,13 @@ export interface Cohort extends EntityBase {
   bankId?: EntityId;
 }
 
-export type Entity = Bank | Company | Household | CentralBank | Government | Cohort;
+export type Entity = Bank | Company | Person | CentralBank | Government | Cohort;
 
 export function isCompany(e: Entity): e is Company {
   return e.kind === 'company';
 }
-export function isHousehold(e: Entity): e is Household {
-  return e.kind === 'household';
+export function isPerson(e: Entity): e is Person {
+  return e.kind === 'person';
 }
 export function isBank(e: Entity): e is Bank {
   return e.kind === 'bank';

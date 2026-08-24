@@ -95,11 +95,11 @@ export function submitApplication(
   const { world } = ctx;
   const applicant = world.entities[args.applicantId];
   const grade =
-    applicant && (applicant.kind === 'company' || applicant.kind === 'household')
+    applicant && (applicant.kind === 'company' || applicant.kind === 'person')
       ? applicant.creditGrade
       : 'BB';
   const pdAnnual =
-    applicant && (applicant.kind === 'company' || applicant.kind === 'household')
+    applicant && (applicant.kind === 'company' || applicant.kind === 'person')
       ? applicant.pdAnnual
       : 0.03;
 

@@ -92,12 +92,12 @@ export const uk2025: ScenarioSpec = {
     medium('health', 'midlands', 90, 200),
   ],
 
-  householdCohorts: [
-    households('london', 60000, pounds(180), 0.94),
-    households('south', 80000, pounds(140), 0.95),
-    households('midlands', 80000, pounds(120), 0.93),
-    households('north', 60000, pounds(115), 0.92),
-    { ...households('south', 20000, pounds(130), 0.95), id: 'coh:hh:retail', banksWithPlayer: true },
+  personCohorts: [
+    people('london', 60000, pounds(180), 0.94),
+    people('south', 80000, pounds(140), 0.95),
+    people('midlands', 80000, pounds(120), 0.93),
+    people('north', 60000, pounds(115), 0.92),
+    { ...people('south', 20000, pounds(130), 0.95), id: 'coh:hh:retail', banksWithPlayer: true },
   ],
 
   existingCorporateCustomers: 60,
@@ -172,7 +172,7 @@ function medium(sector: string, region: string, count: number, employees: number
   };
 }
 
-function households(region: string, count: number, wage: Money, employmentRate: number) {
+function people(region: string, count: number, wage: Money, employmentRate: number) {
   return {
     region,
     creditGrade: 'BBB' as CreditGrade,
@@ -181,7 +181,7 @@ function households(region: string, count: number, wage: Money, employmentRate: 
     wageSigma: 0.45,
     meanPropensityToConsume: 0.95,
     employmentRate,
-    savingsPerHousehold: pounds(16_000),
-    debtPerHousehold: pounds(14_000),
+    savingsPerPerson: pounds(16_000),
+    debtPerPerson: pounds(14_000),
   };
 }

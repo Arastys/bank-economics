@@ -135,7 +135,7 @@ export function approveApplication(ctx: SimContext, app: CreditApplication, rate
 
   // Money is advanced into an account with the lending bank, so winning the
   // loan wins the banking relationship too.
-  if ((applicant.kind === 'company' || applicant.kind === 'household') && applicant.bankId !== app.lenderId) {
+  if ((applicant.kind === 'company' || applicant.kind === 'person') && applicant.bankId !== app.lenderId) {
     switchBank(ctx, applicant.id, app.lenderId);
   }
 

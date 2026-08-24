@@ -3,7 +3,8 @@ import { newGame } from '../src/index.js';
 import { demoteEntity, promoteMember, switchBank } from '../src/agents/lod.js';
 import { AC, depositCode } from '../src/ledger/accounts.js';
 import { entityTrialBalance, naturalBalance, trialBalance } from '../src/ledger/ledger.js';
-import { cohorts } from '../src/world/state.js';
+import { cohorts, resolvedPeople, type WorldState } from '../src/world/state.js';
+import { load, save } from '../src/engine/snapshot.js';
 
 function firstCompanyCohort(world: ReturnType<typeof newGame>['world']) {
   const cohort = cohorts(world).find((c) => c.memberKind === 'company' && c.count > 10);
@@ -109,8 +110,39 @@ describe('level of detail', () => {
     const engine = newGame('uk2025');
     engine.run(400);
     const resolved = Object.values(engine.world.entities).filter(
-      (e) => e.kind === 'company' || e.kind === 'household',
+      (e) => e.kind === 'company' || e.kind === 'person',
     ).length;
     expect(resolved).toBeLessThanOrEqual(engine.world.config.maxResolvedEntities);
+  });
+});
+
+/**
+ * The rename was a rename. The entity earned one wage and the labour force was
+ * a straight count of them, so it always was a person rather than a spending
+ * unit shared by several.
+ */
+describe('households became people', () => {
+  it('carries an old save forward onto the new name', () => {
+    const world = newGame('uk2025').world;
+    const legacy = JSON.parse(save(world)) as { version: number; world: WorldState };
+    legacy.version = 4;
+    // The opening world keeps people latent inside pools, so the discriminator
+    // that matters here is the pool's memberKind rather than an entity kind.
+    let renamed = 0;
+    for (const entity of Object.values(legacy.world.entities) as { kind: string; memberKind?: string }[]) {
+      if (entity.kind === 'person') { entity.kind = 'household'; renamed++; }
+      if (entity.memberKind === 'person') { entity.memberKind = 'household'; renamed++; }
+    }
+    expect(renamed).toBeGreaterThan(0);
+
+    const migrated = load(JSON.stringify(legacy));
+    expect(cohorts(migrated).filter((c) => c.memberKind === 'person').length).toBe(
+      cohorts(world).filter((c) => c.memberKind === 'person').length,
+    );
+    expect(resolvedPeople(migrated).length).toBe(resolvedPeople(world).length);
+    for (const entity of Object.values(migrated.entities) as { kind: string; memberKind?: string }[]) {
+      expect(entity.kind).not.toBe('household');
+      expect(entity.memberKind ?? 'person').not.toBe('household');
+    }
   });
 });

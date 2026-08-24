@@ -14,15 +14,15 @@ import type {
   CompanyArchetype,
   Entity,
   EntityId,
-  Household,
-  HouseholdArchetype,
+  Person,
+  PersonArchetype,
 } from '../world/types.js';
 
 /**
  * Level of detail.
  *
  * Most of the economy is latent: it lives inside cohorts as counts and
- * aggregate balances. The moment a firm or household actually deals with the
+ * aggregate balances. The moment a firm or person actually deals with the
  * player it is materialised into a full entity, carrying a carved-out share of
  * its pool's balance sheet with it. When the relationship ends it folds back.
  *
@@ -31,7 +31,7 @@ import type {
  */
 
 export interface PromotionResult {
-  entity: Company | Household;
+  entity: Company | Person;
   sizeFactor: number;
 }
 
@@ -50,14 +50,14 @@ export function promoteMember(
   const rng = identityRng(world.seed, identity);
 
   // Mean of the log-normal factor is 1, so an average member carves 1/count.
-  const sigma = cohort.memberKind === 'company' ? (cohort.archetype as CompanyArchetype).sizeSigma : (cohort.archetype as HouseholdArchetype).wageSigma;
+  const sigma = cohort.memberKind === 'company' ? (cohort.archetype as CompanyArchetype).sizeSigma : (cohort.archetype as PersonArchetype).wageSigma;
   const sizeFactor = Math.min(logNormal(rng, -(sigma * sigma) / 2, sigma), cohort.count * 0.9);
   const share = Math.min(0.9, sizeFactor / cohort.count);
 
   const entity =
     cohort.memberKind === 'company'
       ? buildCompany(world, cohort, identity, sizeFactor)
-      : buildHousehold(world, cohort, identity, sizeFactor);
+      : buildPerson(world, cohort, identity, sizeFactor);
 
   addEntity(world, entity);
   carveBalanceSheet(ctx, cohort.id, entity.id, share);
@@ -70,10 +70,10 @@ export function promoteMember(
     cohort.pool.inventoryUnits = Math.max(0, (cohort.pool.inventoryUnits ?? 0) - stock);
     company.inventoryUnits = stock;
   } else {
-    const household = entity as Household;
+    const person = entity as Person;
     const employed = (cohort.pool.employed ?? 0) > 0 ? 1 : 0;
     cohort.pool.employed = Math.max(0, (cohort.pool.employed ?? 0) - employed);
-    household.employed = employed > 0;
+    person.employed = employed > 0;
   }
 
   attachLegacyDebt(ctx, cohort, entity.id);
@@ -102,7 +102,7 @@ function attachLegacyDebt(ctx: SimContext, cohort: Cohort, entityId: EntityId): 
   const base = cb?.kind === 'centralBank' ? cb.bankRate : 0.05;
   const grade = cohort.memberKind === 'company'
     ? (cohort.archetype as CompanyArchetype).creditGrade
-    : (cohort.archetype as HouseholdArchetype).creditGrade;
+    : (cohort.archetype as PersonArchetype).creditGrade;
 
   addInstrument(ctx.world, {
     id: nextId(ctx.world.ids, 'loan'),
@@ -165,14 +165,14 @@ function buildCompany(world: WorldState, cohort: Cohort, identity: string, sizeF
   };
 }
 
-function buildHousehold(world: WorldState, cohort: Cohort, identity: string, sizeFactor: number): Household {
-  const archetype = cohort.archetype as HouseholdArchetype;
+function buildPerson(world: WorldState, cohort: Cohort, identity: string, sizeFactor: number): Person {
+  const archetype = cohort.archetype as PersonArchetype;
   const id = nextId(world.ids, 'hh');
   return {
     id,
-    kind: 'household',
+    kind: 'person',
     detail: 'resolved',
-    name: householdName(world, identity),
+    name: personName(world, identity),
     createdOn: world.tick,
     originCohortId: cohort.id,
     region: archetype.region,
@@ -237,7 +237,7 @@ function carveBalanceSheet(ctx: SimContext, cohortId: EntityId, entityId: Entity
 export function demoteEntity(ctx: SimContext, entityId: EntityId): boolean {
   const { world } = ctx;
   const entity = world.entities[entityId];
-  if (!entity || (entity.kind !== 'company' && entity.kind !== 'household')) return false;
+  if (!entity || (entity.kind !== 'company' && entity.kind !== 'person')) return false;
   if (!entity.originCohortId) return false;
 
   const cohort = world.entities[entity.originCohortId];
@@ -285,7 +285,7 @@ export function demoteEntity(ctx: SimContext, entityId: EntityId): boolean {
 export function dissolveEntity(ctx: SimContext, entityId: EntityId): boolean {
   const { world } = ctx;
   const entity = world.entities[entityId];
-  if (!entity || (entity.kind !== 'company' && entity.kind !== 'household')) return false;
+  if (!entity || (entity.kind !== 'company' && entity.kind !== 'person')) return false;
 
   const cohort = entity.originCohortId ? world.entities[entity.originCohortId] : undefined;
   if (!cohort || cohort.kind !== 'cohort') return false;
@@ -328,7 +328,7 @@ function hasLiveContracts(world: WorldState, entityId: EntityId): boolean {
  */
 export function switchBank(ctx: SimContext, entityId: EntityId, newBankId: EntityId): void {
   const entity = getEntity(ctx.world, entityId);
-  if (entity.kind !== 'company' && entity.kind !== 'household' && entity.kind !== 'cohort') return;
+  if (entity.kind !== 'company' && entity.kind !== 'person' && entity.kind !== 'cohort') return;
   const oldBankId = entity.bankId;
   if (oldBankId === newBankId) return;
 
@@ -359,7 +359,7 @@ function countResolved(world: WorldState): number {
   let n = 0;
   for (const id in world.entities) {
     const e: Entity = world.entities[id]!;
-    if (e.kind === 'company' || e.kind === 'household') n++;
+    if (e.kind === 'company' || e.kind === 'person') n++;
   }
   return n;
 }
@@ -408,8 +408,8 @@ function companyName(world: WorldState, identity: string, archetype: CompanyArch
   return `${stem} ${sector} ${suffix}`;
 }
 
-function householdName(world: WorldState, identity: string): string {
+function personName(world: WorldState, identity: string): string {
   const rng = identityRng(world.seed, `name:${identity}`);
   const surname = SURNAMES[Math.floor(rng() * SURNAMES.length)]!;
-  return `${surname} household`;
+  return `${surname} person`;
 }

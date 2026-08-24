@@ -4,7 +4,7 @@ import { AC, type AccountCode } from '../ledger/accounts.js';
 import { balance, credit, debit, post, type LedgerState } from '../ledger/ledger.js';
 import { clearMarket, spendable, type MarketLeg } from '../world/transfer.js';
 import { realRateGap, type SimConfig, type WorldState } from '../world/state.js';
-import { firmViews, householdViews, type FirmView } from '../agents/views.js';
+import { firmViews, personViews, type FirmView } from '../agents/views.js';
 import { PHASE, defineSystem } from './system.js';
 
 /** Five working days in seven. */
@@ -22,7 +22,7 @@ interface Buyer {
 /**
  * The goods market.
  *
- * Two kinds of demand meet one pool of output: households spending wages and
+ * Two kinds of demand meet one pool of output: people spending wages and
  * savings, and firms reinvesting takings in capacity. The cheapest goods sell
  * first; firms that clear their shelves raise prices and firms left holding
  * stock cut them. That is where the price level -- and so inflation, and so
@@ -35,7 +35,7 @@ interface Buyer {
 export const goodsMarketSystem = defineSystem({
   id: 'economy.goodsMarket',
   phase: PHASE.GOODS_MARKET,
-  description: 'Clears household and investment demand against firm output',
+  description: 'Clears person and investment demand against firm output',
   run(ctx) {
     const { world, ledger, tick } = ctx;
     const firms = firmViews(world);
@@ -109,7 +109,7 @@ export const goodsMarketSystem = defineSystem({
 
     // Income is spent once. Anything left over stays as savings rather than
     // being counted again tomorrow.
-    for (const household of householdViews(world)) household.lastIncome = ZERO;
+    for (const person of personViews(world)) person.lastIncome = ZERO;
 
     const averagePrice = unitsSold > 0 ? priceWeightedUnits / unitsSold : world.economy.priceIndex;
     updatePriceLevel(world, averagePrice, averagePrice > 0 ? totalBudget / averagePrice : 0);
@@ -158,23 +158,23 @@ function collectBuyers(world: WorldState, ledger: LedgerState, firms: FirmView[]
   const buyers: Buyer[] = [];
   const rateGap = realRateGap(world);
 
-  for (const household of householdViews(world)) {
-    // Households budget from a smoothed income figure rather than from what
+  for (const person of personViews(world)) {
+    // People budget from a smoothed income figure rather than from what
     // landed today. Otherwise spending collapses every weekend, firms see
     // wild swings in sell-through, and prices oscillate for no real reason.
-    household.incomeRate = round(
-      household.incomeRate * (1 - world.config.incomeSmoothing) +
-        household.lastIncome * world.config.incomeSmoothing,
+    person.incomeRate = round(
+      person.incomeRate * (1 - world.config.incomeSmoothing) +
+        person.lastIncome * world.config.incomeSmoothing,
     );
-    const savings = spendable(world, ledger, household.id);
+    const savings = spendable(world, ledger, person.id);
     const budget = consumptionBudget(
-      household.propensityToConsume,
-      household.incomeRate,
+      person.propensityToConsume,
+      person.incomeRate,
       savings,
       world.config,
       rateGap,
     );
-    if (budget > 0) buyers.push({ id: household.id, budget, contra: AC.CONSUMPTION });
+    if (budget > 0) buyers.push({ id: person.id, budget, contra: AC.CONSUMPTION });
   }
 
   const appetite = investmentAppetite(world);
@@ -194,16 +194,16 @@ function collectBuyers(world: WorldState, ledger: LedgerState, firms: FirmView[]
 }
 
 /**
- * What a household puts on the counter today.
+ * What a person puts on the counter today.
  *
  * Saving is the gap to a target buffer, not a fixed share of income. A fixed
- * share never stops: households hold back the same slice of every wage packet
+ * share never stops: people hold back the same slice of every wage packet
  * and only trickle the pot back out, so the firm sector hands over more cash
  * than it takes, every day, for ever. Nothing in a year or two of trading
  * shows it -- it took eight simulated years for firm cash to fall from £2.9bn
  * to £90m and unemployment to reach 61% with nothing else wrong.
  *
- * With a buffer, saving is zero once the buffer is full, and a household
+ * With a buffer, saving is zero once the buffer is full, and a person
  * sitting on more than it wants spends the excess down.
  */
 export function consumptionBudget(
@@ -223,13 +223,13 @@ export function consumptionBudget(
 }
 
 /**
- * The share of income a household spends rather than saves, once the return on
+ * The share of income a person spends rather than saves, once the return on
  * saving is taken into account. This is the consumption half of monetary
  * transmission.
  *
  * It shifts the saving *rate*, which is a flow, and deliberately not the
  * target buffer, which is a stock. Re-targeting a stock looks equivalent and
- * is not: asking for a tenth more buffer asks households to withhold eighteen
+ * is not: asking for a tenth more buffer asks people to withhold eighteen
  * days of income, all at once, and hand it back just as abruptly when rates
  * fall. Built that way first, it gave the committee real traction and wrecked
  * the economy doing it -- 8% unemployment at a sensitivity of 1 and 21% at 4,

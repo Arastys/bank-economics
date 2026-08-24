@@ -2,7 +2,7 @@ import { ZERO, allocate, atLeastZero, min, sub, type Money } from '../core/money
 import { isBusinessDay } from '../core/time.js';
 import { AC } from '../ledger/accounts.js';
 import { clearMarket, spendable, type MarketLeg } from '../world/transfer.js';
-import { firmViews, householdViews, totalWageBill, type HouseholdView } from '../agents/views.js';
+import { firmViews, personViews, totalWageBill, type PersonView } from '../agents/views.js';
 import { owedBy, type WorldState } from '../world/state.js';
 import { PHASE, defineSystem } from './system.js';
 
@@ -17,19 +17,19 @@ import { PHASE, defineSystem } from './system.js';
 export const productionSystem = defineSystem({
   id: 'economy.production',
   phase: PHASE.PRODUCTION,
-  description: 'Firms produce output and pay wages to households',
+  description: 'Firms produce output and pay wages to people',
   run(ctx) {
     if (!isBusinessDay(ctx.tick)) return;
     const { world, ledger } = ctx;
 
-    const households = householdViews(world);
-    const byRegion = new Map<string, HouseholdView[]>();
-    for (const h of households) {
+    const people = personViews(world);
+    const byRegion = new Map<string, PersonView[]>();
+    for (const h of people) {
       const list = byRegion.get(h.region) ?? [];
       list.push(h);
       byRegion.set(h.region, list);
     }
-    for (const h of households) h.lastIncome = ZERO;
+    for (const h of people) h.lastIncome = ZERO;
 
     const payers: MarketLeg[] = [];
     const receipts = new Map<string, number>();
@@ -63,9 +63,9 @@ export const productionSystem = defineSystem({
       if (paid <= 0) continue;
       payers.push({ id: firm.id, amount: paid, contra: AC.INVENTORY });
 
-      // Wages go to households where the firm actually is, weighted by how
+      // Wages go to people where the firm actually is, weighted by how
       // many of them are in work.
-      const recipients = byRegion.get(firm.region) ?? households;
+      const recipients = byRegion.get(firm.region) ?? people;
       const weights = recipients.map((h) => Math.max(0, h.employed));
       const shares = allocate(paid, weights);
       recipients.forEach((h, i) => {
@@ -92,7 +92,7 @@ export const productionSystem = defineSystem({
 
     world.economy.outputUnits = outputUnits;
     world.economy.employed = employed;
-    world.economy.labourForce = households.reduce((total, h) => total + h.count, 0);
+    world.economy.labourForce = people.reduce((total, h) => total + h.count, 0);
     // Measured against the people actually in the labour market, not the whole
     // population, so a fully employed economy reads as zero rather than as the
     // participation gap.

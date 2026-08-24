@@ -1,5 +1,5 @@
 import { demoteEntity, dissolveEntity } from '../agents/lod.js';
-import { pruneApplications, pruneInstruments, resolvedCompanies, resolvedHouseholds } from '../world/state.js';
+import { pruneApplications, pruneInstruments, resolvedCompanies, resolvedPeople } from '../world/state.js';
 import { PHASE, defineSystem } from './system.js';
 
 /** Only sweep occasionally -- folding entities away is not urgent work. */
@@ -32,10 +32,10 @@ export const levelOfDetailSystem = defineSystem({
       demoteEntity(ctx, company.id);
     }
 
-    for (const household of resolvedHouseholds(world)) {
-      if (!household.originCohortId) continue;
-      const last = world.lastInteraction[household.id] ?? household.createdOn;
-      if (last <= cutoff) demoteEntity(ctx, household.id);
+    for (const person of resolvedPeople(world)) {
+      if (!person.originCohortId) continue;
+      const last = world.lastInteraction[person.id] ?? person.createdOn;
+      if (last <= cutoff) demoteEntity(ctx, person.id);
     }
 
     pruneInstruments(world, 90);

@@ -1,13 +1,13 @@
 import { ZERO, type Money } from '../core/money.js';
 import type { WorldState } from '../world/state.js';
-import { cohorts, resolvedCompanies, resolvedHouseholds } from '../world/state.js';
+import { cohorts, resolvedCompanies, resolvedPeople } from '../world/state.js';
 import type {
   Cohort,
   Company,
   CompanyArchetype,
   EntityId,
-  Household,
-  HouseholdArchetype,
+  Person,
+  PersonArchetype,
   RegionId,
   SectorId,
 } from '../world/types.js';
@@ -152,8 +152,8 @@ export class FirmView {
   }
 }
 
-export class HouseholdView {
-  constructor(private readonly target: Household | Cohort) {}
+export class PersonView {
+  constructor(private readonly target: Person | Cohort) {}
 
   get id(): EntityId {
     return this.target.id;
@@ -167,8 +167,8 @@ export class HouseholdView {
     return this.target.kind === 'cohort' ? this.target.count : 1;
   }
 
-  private get archetype(): HouseholdArchetype {
-    return (this.target as Cohort).archetype as HouseholdArchetype;
+  private get archetype(): PersonArchetype {
+    return (this.target as Cohort).archetype as PersonArchetype;
   }
 
   get region(): RegionId {
@@ -217,12 +217,12 @@ export class HouseholdView {
     else this.target.incomeRate = value;
   }
 
-  get entity(): Household | Cohort {
+  get entity(): Person | Cohort {
     return this.target;
   }
 
-  get household(): Household | undefined {
-    return this.target.kind === 'household' ? this.target : undefined;
+  get person(): Person | undefined {
+    return this.target.kind === 'person' ? this.target : undefined;
   }
 }
 
@@ -237,11 +237,11 @@ export function firmViews(world: WorldState): FirmView[] {
   return views;
 }
 
-export function householdViews(world: WorldState): HouseholdView[] {
-  const views: HouseholdView[] = [];
-  for (const household of resolvedHouseholds(world)) views.push(new HouseholdView(household));
+export function personViews(world: WorldState): PersonView[] {
+  const views: PersonView[] = [];
+  for (const person of resolvedPeople(world)) views.push(new PersonView(person));
   for (const cohort of cohorts(world)) {
-    if (cohort.memberKind === 'household' && cohort.count > 0) views.push(new HouseholdView(cohort));
+    if (cohort.memberKind === 'person' && cohort.count > 0) views.push(new PersonView(cohort));
   }
   return views;
 }

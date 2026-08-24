@@ -43,7 +43,7 @@ export const HELP: Record<string, string> = {
   inflation:
     'How fast prices are rising year on year. The Bank targets 2%; a long way either side and it will move rates.',
   unemployment:
-    'The share of the workforce without a job. It drives what households can spend, and so what your borrowers can sell.',
+    'The share of the workforce without a job. It drives what people can spend, and so what your borrowers can sell.',
 
   // --- controls ------------------------------------------------------------
   autoUnderwrite:

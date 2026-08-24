@@ -14,14 +14,14 @@ function sectorCash(world: WorldState, ids: string[]): number {
 /**
  * The defect this exists to prevent.
  *
- * Households used to spend a fixed share of income and run savings down at a
+ * People used to spend a fixed share of income and run savings down at a
  * flat daily rate, which do not balance: the savings stock has to reach five
  * hundred days of income before the two flows meet. Until then the firm sector
  * hands over more cash than it gets back, every day, for ever. It took eight
  * simulated years to show: firm cash fell from £2.9bn to £90m, and
  * unemployment reached 61% with nothing else wrong with the model.
  */
-describe('households save towards a buffer, not for ever', () => {
+describe('people save towards a buffer, not for ever', () => {
   it('does not drain the firm sector over a decade', () => {
     const engine = newGame('uk2025');
     const world = engine.world;
@@ -42,7 +42,7 @@ describe('households save towards a buffer, not for ever', () => {
 
   it('holds back when savings are below the buffer', () => {
     const { config } = newGame('uk2025').world;
-    // At the buffer a household saves the share it does not consume...
+    // At the buffer a person saves the share it does not consume...
     expect(budgetAt(config.savingsBufferDays)).toBeLessThan(1);
     // ...and below it, harder still.
     expect(budgetAt(60)).toBeLessThan(budgetAt(config.savingsBufferDays));
@@ -69,7 +69,7 @@ describe('households save towards a buffer, not for ever', () => {
   });
 });
 
-/** Spending as a multiple of income, for a household holding `days` of income. */
+/** Spending as a multiple of income, for a person holding `days` of income. */
 function budgetAt(days: number): number {
   const { config } = newGame('uk2025').world;
   const income = pounds(100) as Money;

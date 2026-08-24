@@ -9,7 +9,7 @@ import type {
   CreditGrade,
   Entity,
   EntityId,
-  Household,
+  Person,
   Region,
   Sector,
 } from './types.js';
@@ -72,21 +72,21 @@ export interface SimConfig {
    */
   investmentRateSensitivity: number;
   /**
-   * The buffer of savings households aim to hold, in days of income.
+   * The buffer of savings people aim to hold, in days of income.
    *
-   * Without a target, a fixed saving rate is a permanent leak: households put
+   * Without a target, a fixed saving rate is a permanent leak: people put
    * a share of every wage packet into a pot and only ever trickle it back out,
    * so the firm sector loses that much cash a day for ever. With one, saving
    * is the gap to the buffer, which is zero once the buffer is full.
    */
   savingsBufferDays: number;
-  /** Daily share of the gap to the buffer households close. */
+  /** Daily share of the gap to the buffer people close. */
   savingsAdjustment: number;
   /**
-   * How much a better return on savings makes households hold back.
+   * How much a better return on savings makes people hold back.
    *
    * Subtracted from the propensity to consume as `base - this * realRateGap`,
-   * so at 2 a 250bp real tightening moves a household spending 95p in the
+   * so at 2 a 250bp real tightening moves a person spending 95p in the
    * pound to 90p. It shifts the saving rate, which is a flow, and not the
    * target buffer, which is a stock -- see `propensityOutOfIncome`.
    *
@@ -99,7 +99,7 @@ export interface SimConfig {
    * docs/ROADMAP.md.
    */
   savingsRateSensitivity: number;
-  /** How quickly households' smoothed income follows actual receipts. */
+  /** How quickly people' smoothed income follows actual receipts. */
   incomeSmoothing: number;
   /** Share of the population in the labour market. */
   labourParticipation: number;
@@ -256,7 +256,7 @@ export interface WorldState {
   config: SimConfig;
 }
 
-export const WORLD_VERSION = 4;
+export const WORLD_VERSION = 5;
 
 export const DEFAULT_CONFIG: SimConfig = {
   applicationValidityDays: 14,
@@ -348,8 +348,8 @@ export function resolvedCompanies(world: WorldState): Company[] {
   return entitiesOfKind(world, 'company');
 }
 
-export function resolvedHouseholds(world: WorldState): Household[] {
-  return entitiesOfKind(world, 'household');
+export function resolvedPeople(world: WorldState): Person[] {
+  return entitiesOfKind(world, 'person');
 }
 
 export function cohorts(world: WorldState): Cohort[] {
@@ -377,7 +377,7 @@ export function centralBank(world: WorldState) {
  * until something read it there was none. Bank Rate priced loans, remunerated
  * reserves and set the yield curve, but no spending decision anywhere looked
  * at it: firms borrowed to cover payroll, invested a fixed share of takings
- * and households saved towards a fixed buffer, none of which cared what money
+ * and people saved towards a fixed buffer, none of which cared what money
  * cost. Pinning Bank Rate across a 900 basis point span moved inflation by
  * 0.2 points, and in the wrong direction -- dearer credit raised firms' costs
  * and the cost anchor passed them into prices, with nothing anywhere reducing

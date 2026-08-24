@@ -41,7 +41,7 @@ describe('the policy rate reaches the economy', () => {
     expect(investmentAppetite(worldAtRate(0.00))).toBeGreaterThan(1);
   });
 
-  it('makes households hold back more of their pay when saving pays better', () => {
+  it('makes people hold back more of their pay when saving pays better', () => {
     expect(propensityOutOfIncome(0.95, SAVERS, 0.025)).toBeLessThan(0.95);
     expect(propensityOutOfIncome(0.95, SAVERS, -0.025)).toBeGreaterThan(0.95);
   });

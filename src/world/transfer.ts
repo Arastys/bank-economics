@@ -89,7 +89,7 @@ export function payBetween(
 /**
  * Accumulates many small flows into one transaction.
  *
- * Wages and consumption touch every firm and every household cohort on every
+ * Wages and consumption touch every firm and every person cohort on every
  * tick. Batching keeps the journal readable and the tick cheap, without giving
  * up the guarantee that each flow is individually balanced.
  */

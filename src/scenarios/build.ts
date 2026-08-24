@@ -175,15 +175,15 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
     });
   });
 
-  const householdCohorts: Cohort[] = spec.householdCohorts.map((cohortSpec, index) => {
+  const personCohorts: Cohort[] = spec.personCohorts.map((cohortSpec, index) => {
     const id = cohortSpec.id ?? `coh:hh:${index}`;
     return addEntity(world, {
       id,
       kind: 'cohort',
       detail: 'cohort',
-      name: `Households (${cohortSpec.region}${cohortSpec.banksWithPlayer ? ', your customers' : ''})`,
+      name: `People (${cohortSpec.region}${cohortSpec.banksWithPlayer ? ', your customers' : ''})`,
       createdOn: startTick,
-      memberKind: 'household',
+      memberKind: 'person',
       count: cohortSpec.count,
       nextMemberIndex: 0,
       bankId: cohortSpec.banksWithPlayer ? PLAYER_BANK_ID : OTHER_BANKS_ID,
@@ -299,11 +299,11 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
     otherLoans = add(otherLoans, debt);
   });
 
-  spec.householdCohorts.forEach((cohortSpec, index) => {
-    const cohort = householdCohorts[index]!;
+  spec.personCohorts.forEach((cohortSpec, index) => {
+    const cohort = personCohorts[index]!;
     const bankId = cohort.bankId!;
-    const savings = scale(cohortSpec.savingsPerHousehold, cohort.count);
-    const debt = scale(cohortSpec.debtPerHousehold, cohort.count);
+    const savings = scale(cohortSpec.savingsPerPerson, cohort.count);
+    const debt = scale(cohortSpec.debtPerPerson, cohort.count);
     openWithCapital(
       ledger,
       cohort.id,
@@ -313,7 +313,7 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
     );
     if (bankId === PLAYER_BANK_ID) playerDeposits = add(playerDeposits, savings);
     else otherDeposits = add(otherDeposits, savings);
-    // Household borrowing predates the game and sits with the rest of the
+    // Person borrowing predates the game and sits with the rest of the
     // market, so the player's book starts purely corporate. Retail lending is
     // a deliberate extension point rather than a starting position.
     otherLoans = add(otherLoans, debt);
@@ -439,7 +439,7 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
     });
   }
 
-  for (const cohort of householdCohorts) {
+  for (const cohort of personCohorts) {
     addInstrument(world, {
       id: nextId(ids, 'dep'),
       type: DEPOSIT_INSTANT,
@@ -466,7 +466,7 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
   let labourForce = 0;
   for (const cohort of companyCohorts) potential += (cohort.pool.employees ?? 0) * ((cohort.archetype as { meanProductivity: number }).meanProductivity ?? 0);
   for (const customer of customers) potential += customer.company.employees * customer.company.productivity;
-  for (const cohort of householdCohorts) labourForce += cohort.count;
+  for (const cohort of personCohorts) labourForce += cohort.count;
 
   world.economy.potentialOutput = potential;
   world.economy.outputUnits = potential;

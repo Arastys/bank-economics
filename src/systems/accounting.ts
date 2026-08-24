@@ -2,7 +2,7 @@ import { ZERO, allocate, scale, type Money } from '../core/money.js';
 import { isMonthEnd, isYearEnd, toDate } from '../core/time.js';
 import { AC } from '../ledger/accounts.js';
 import { closePeriod, incomeStatement } from '../ledger/statements.js';
-import { householdViews } from '../agents/views.js';
+import { personViews } from '../agents/views.js';
 import { clearMarket, payBetween, spendable, type MarketLeg } from '../world/transfer.js';
 import { entitiesOfKind } from '../world/state.js';
 import { credit, debit, naturalBalance, ownerIds, post, type LedgerState } from '../ledger/ledger.js';
@@ -24,8 +24,8 @@ export const accountingSystem = defineSystem({
 
     if (isMonthEnd(ctx.tick)) {
       depreciateFixedAssets(ctx);
-      const households = householdViews(world);
-      const weights = households.map((h) => h.count);
+      const people = personViews(world);
+      const weights = people.map((h) => h.count);
       const payers: MarketLeg[] = [];
       const receipts = new Map<string, number>();
 
@@ -35,7 +35,7 @@ export const accountingSystem = defineSystem({
         // Running costs are somebody else's income.
         payers.push({ id: bank.id, amount: cost, contra: AC.OPERATING_EXPENSE });
         const shares = allocate(cost, weights);
-        households.forEach((h, i) => {
+        people.forEach((h, i) => {
           const share = shares[i] ?? ZERO;
           if (share > 0) receipts.set(h.id, (receipts.get(h.id) ?? 0) + share);
         });
@@ -131,11 +131,11 @@ function spendPublicMoney(ctx: {
   const receipts = spendable(world, ledger, world.governmentId);
   if (receipts <= 0) return;
 
-  const households = householdViews(world);
-  const weights = households.map((h) => h.count);
+  const people = personViews(world);
+  const weights = people.map((h) => h.count);
   const shares = allocate(receipts, weights);
   const payees: MarketLeg[] = [];
-  households.forEach((h, i) => {
+  people.forEach((h, i) => {
     const share = shares[i] ?? ZERO;
     if (share > 0) payees.push({ id: h.id, amount: share, contra: AC.WAGE_INCOME });
   });
