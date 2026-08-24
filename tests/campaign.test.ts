@@ -130,6 +130,43 @@ describe('reading results back', () => {
     expect(text).toContain('+60.0');
   });
 
+  /**
+   * A results file is meant to be handed over, and may well predate whatever
+   * is being asked of it. A report that throws on an older file is useless
+   * exactly when someone is trying to compare two of them.
+   */
+  it('reads a file recorded before a metric existed', () => {
+    const older: CampaignFile = {
+      format: CAMPAIGN_FORMAT,
+      createdAt: new Date().toISOString(),
+      preset: 'smoke',
+      seeds: [1],
+      machine: { cores: 4, node: 'v22', platform: 'linux', arch: 'x64' },
+      elapsedSeconds: 1,
+      studies: [
+        {
+          id: 'baseline',
+          label: 'Baseline',
+          question: 'Does an older file still render?',
+          runs: [
+            // No grossMargin, and no unemployment either: an old shape.
+            run({
+              seed: 1,
+              label: 'baseline',
+              score: 90,
+              summary: { inflation: { mean: 0.02, std: 0.01, min: 0, max: 0 } } as never,
+            }),
+          ],
+        },
+      ],
+    };
+    const text = reportCampaign(older);
+    expect(text).toContain('Does an older file still render?');
+    expect(text).toContain('2.00%');
+    // Missing figures show as a dash rather than taking the report down.
+    expect(text).toContain('—');
+  });
+
   it('says so rather than crashing when a study produced nothing usable', () => {
     const file: CampaignFile = {
       format: CAMPAIGN_FORMAT,

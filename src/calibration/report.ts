@@ -65,21 +65,38 @@ export function comparePaired(
   };
 }
 
+/**
+ * Read one figure across a set of runs.
+ *
+ * Deliberately forgiving: a results file is meant to be handed over, and it
+ * may well have been produced before whatever is being asked for was recorded.
+ * A report that throws on an older file is useless precisely when someone is
+ * trying to compare two of them.
+ */
 function metric(runs: CampaignRun[], read: (summary: RunSummary) => number): string {
-  const values = runs.map((run) => (run.summary ? read(run.summary) : Number.NaN)).filter(Number.isFinite);
+  const values = runs.map((run) => (run.summary ? readSafely(run.summary, read) : Number.NaN)).filter(Number.isFinite);
   if (values.length === 0) return '—';
   const spread = spreadOf(values);
   const average = values.reduce((a, b) => a + b, 0) / values.length;
   return `${pct(average)} ±${(spread.standardError * 100).toFixed(2)}`;
 }
 
+function readSafely(summary: RunSummary, read: (summary: RunSummary) => number): number {
+  try {
+    const value = read(summary);
+    return typeof value === 'number' ? value : Number.NaN;
+  } catch {
+    return Number.NaN;
+  }
+}
+
 const METRICS: [string, (s: RunSummary) => number][] = [
-  ['inflation', (s) => s.inflation.mean],
-  ['infl. volatility', (s) => s.inflation.std],
-  ['unemployment', (s) => s.unemployment.mean],
+  ['inflation', (s) => s.inflation?.mean],
+  ['infl. volatility', (s) => s.inflation?.std],
+  ['unemployment', (s) => s.unemployment?.mean],
   ['output growth', (s) => s.outputGrowth],
   ['insolvency', (s) => s.insolvencyRate],
-  ['gross margin', (s) => s.grossMargin.mean],
+  ['gross margin', (s) => s.grossMargin?.mean],
   ['cost of risk', (s) => s.costOfRisk],
   ['net interest margin', (s) => s.nim],
   ['return on equity', (s) => s.roe],
