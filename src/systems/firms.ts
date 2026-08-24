@@ -58,13 +58,13 @@ export const firmDecisionSystem = defineSystem({
 
       if (stockDays < config.targetStockDays * 0.5 && cashMonths > 1) {
         // Selling everything they make, and able to pay for it: expand.
-        const wanted = Math.max(1, Math.round(firm.employees * config.hiringAdjustment));
+        const wanted = headcountStep(firm, config.hiringAdjustment);
         hiring.push({ firm, wanted });
         wantedHires += wanted;
       } else if (stockDays > config.targetStockDays * 2 || cashMonths < 0.5) {
-        const shed = Math.max(1, Math.round(firm.employees * config.hiringAdjustment));
+        const shed = headcountStep(firm, config.hiringAdjustment);
         firm.employees = Math.max(0, firm.employees - shed);
-        if (firm.company) ctx.emit('company.laidOff', { companyId: firm.id, count: shed });
+        if (firm.company) ctx.emit('company.laidOff', { companyId: firm.id, count: Math.round(shed) });
       }
     }
 
@@ -74,10 +74,10 @@ export const firmDecisionSystem = defineSystem({
     // than as extra output.
     const fill = wantedHires > 0 ? Math.min(1, slack / wantedHires) : 0;
     for (const { firm, wanted } of hiring) {
-      const hired = Math.floor(wanted * fill);
+      const hired = firm.isCohort ? wanted * fill : Math.floor(wanted * fill);
       if (hired <= 0) continue;
       firm.employees += hired;
-      if (firm.company) ctx.emit('company.hired', { companyId: firm.id, count: hired });
+      if (firm.company) ctx.emit('company.hired', { companyId: firm.id, count: Math.round(hired) });
     }
 
     for (const company of resolvedCompanies(world)) {
@@ -97,6 +97,21 @@ export const firmDecisionSystem = defineSystem({
     }
   },
 });
+
+/**
+ * How many people a firm takes on or lets go.
+ *
+ * A real company hires whole people, so a resolved firm rounds and moves at
+ * least one. A cohort is an aggregate over thousands of firms and must not:
+ * rounding its headcount makes the economy's behaviour depend on how the
+ * scenario happens to be partitioned. One pool of 27,780 sheds 556 at 2%;
+ * twelve pools of 2,315 shed 46 each, which is 552. Four people a month,
+ * compounding, purely from where the cohort boundaries were drawn.
+ */
+export function headcountStep(firm: FirmView, rate: number): number {
+  const exact = firm.employees * rate;
+  return firm.isCohort ? exact : Math.max(1, Math.round(exact));
+}
 
 /** Price change over the last month, from the daily index history. */
 function monthlyInflation(world: WorldState): number {
