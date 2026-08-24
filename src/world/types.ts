@@ -80,6 +80,12 @@ export interface Company extends EntityBase {
   quality: number;
   /** Units of output per employee per business day, quality already included. */
   productivity: number;
+  /**
+   * What this firm would produce per head at the reference capital per worker.
+   * `productivity` is this scaled by the capital it actually has, and is
+   * rewritten as that capital changes, so the anchor has to be kept separately.
+   */
+  baseProductivity: number;
   /** Daily wage bill per employee. */
   wagePerEmployee: Money;
   /**

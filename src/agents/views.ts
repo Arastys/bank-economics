@@ -59,8 +59,31 @@ export class FirmView {
     else this.target.employees = Math.round(v);
   }
 
+  /**
+   * Output per head as things stand, capital included.
+   *
+   * Written by `economy.capital` as the capital behind each worker changes,
+   * which is why a cohort keeps an override in its pool rather than reading
+   * the archetype straight through: the archetype is the template every member
+   * was cut from and must not drift.
+   */
   get productivity(): number {
-    return this.target.kind === 'cohort' ? this.archetype.meanProductivity : this.target.productivity;
+    return this.target.kind === 'cohort'
+      ? (this.target.pool.productivity ?? this.archetype.meanProductivity)
+      : this.target.productivity;
+  }
+
+  set productivity(value: number) {
+    const v = Math.max(0, value);
+    if (this.target.kind === 'cohort') this.target.pool.productivity = v;
+    else this.target.productivity = v;
+  }
+
+  /** Output per head at the reference capital per worker, before any deepening. */
+  get baseProductivity(): number {
+    return this.target.kind === 'cohort'
+      ? this.archetype.meanProductivity
+      : this.target.baseProductivity;
   }
 
   get wagePerEmployee(): Money {

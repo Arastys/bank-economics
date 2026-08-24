@@ -145,6 +145,7 @@ function buildCompany(world: WorldState, cohort: Cohort, identity: string, sizeF
     employees: Math.max(1, Math.round(archetype.meanEmployees * sizeFactor)),
     quality,
     productivity: archetype.meanProductivity * quality,
+    baseProductivity: archetype.meanProductivity * quality,
     payReviewMonth,
     wageIndexAtReview: world.economy.wageIndex,
     wagePerEmployee: archetype.meanWagePerEmployee,

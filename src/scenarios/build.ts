@@ -290,6 +290,7 @@ export function buildWorld(spec: ScenarioSpec): WorldState {
       employees,
       quality,
       productivity: cohortSpec.meanProductivity * quality,
+      baseProductivity: cohortSpec.meanProductivity * quality,
       payReviewMonth,
       wageIndexAtReview: 1,
       wagePerEmployee: cohortSpec.meanWagePerEmployee,

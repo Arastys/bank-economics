@@ -1,5 +1,6 @@
 import './policy.js';
 import './markets.js';
+import './capital.js';
 import './production.js';
 import './goodsMarket.js';
 import './firms.js';

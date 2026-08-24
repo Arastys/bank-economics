@@ -163,6 +163,22 @@ migrations.set(8, (world) => {
   return world;
 });
 
+/**
+ * Capital finally does something. An old save has firms whose productivity was
+ * a constant from birth, so that constant becomes the base -- the level they
+ * produce at the reference capital per worker -- and the first month end
+ * rescales it by the capital each of them actually holds.
+ */
+migrations.set(9, (world) => {
+  const config = world.config as unknown as Record<string, unknown>;
+  config.capitalElasticity = DEFAULT_CONFIG.capitalElasticity;
+  config.capitalPerWorkerReference = DEFAULT_CONFIG.capitalPerWorkerReference;
+  for (const entity of Object.values(world.entities)) {
+    if (entity.kind === 'company') entity.baseProductivity = entity.productivity;
+  }
+  return world;
+});
+
 export function load(json: string): WorldState {
   const snapshot = JSON.parse(json) as Snapshot;
   if (typeof snapshot?.version !== 'number' || !snapshot.world) {

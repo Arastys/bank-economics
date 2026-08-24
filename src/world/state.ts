@@ -93,6 +93,27 @@ export interface SimConfig {
   /** Share of takings a comfortable firm puts back into capacity. */
   investmentRate: number;
   /**
+   * How much the capital behind a worker changes what they produce.
+   *
+   * Output per head is `baseProductivity * (capital per worker / the reference
+   * below) ^ this`, so at 0.3 -- roughly the capital share of income -- a
+   * doubling of capital per worker buys about a quarter more output per head.
+   * Zero disconnects capital from production entirely and leaves fixed assets
+   * as the inert balance-sheet entry they were.
+   *
+   * This is the only route to growth in output per head that the model has.
+   * Nothing else writes productivity: it was a constant from the firm's birth
+   * to its death, so an economy could only grow by hiring, and the population
+   * is close to stationary.
+   */
+  capitalElasticity: number;
+  /**
+   * The capital per worker, in pence, at which a firm produces exactly its
+   * base. Set to what the starting economy actually has, so a new world opens
+   * on a factor of one and the elasticity above is measured from there.
+   */
+  capitalPerWorkerReference: number;
+  /**
    * How much dear money postpones a capacity decision.
    *
    * The share of takings a firm reinvests is multiplied by
@@ -315,7 +336,7 @@ export interface WorldState {
   config: SimConfig;
 }
 
-export const WORLD_VERSION = 9;
+export const WORLD_VERSION = 10;
 
 export const DEFAULT_CONFIG: SimConfig = {
   applicationValidityDays: 14,
@@ -340,6 +361,8 @@ export const DEFAULT_CONFIG: SimConfig = {
   minMarkup: -0.05,
   priceElasticity: 2.5,
   investmentRate: 0.15,
+  capitalElasticity: 0.3,
+  capitalPerWorkerReference: 4_144_600,
   investmentRateSensitivity: 2,
   savingsBufferDays: 180,
   savingsAdjustment: 0.01,

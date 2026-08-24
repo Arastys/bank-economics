@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { newGame } from '../src/index.js';
 import { personViews } from '../src/agents/views.js';
+import { prosperity } from '../src/systems/demography.js';
 import { spendable } from '../src/world/transfer.js';
 import { trialBalance } from '../src/ledger/ledger.js';
 import { resolvedPeople, type WorldState } from '../src/world/state.js';
@@ -43,32 +44,39 @@ describe('people are born, grow up, work, retire and die', () => {
     expect(heads(engine.world) / before).toBeCloseTo(1, 2);
   }, 120_000);
 
-  it('amplifies prosperity into the population, and is exactly replacement at zero', () => {
-    const run = (fertilityProsperity: number) => {
-      const engine = newGame('uk2025');
-      Object.assign(engine.world.config, { fertilityProsperity });
-      const before = heads(engine.world);
-      engine.run(365 * 18);
-      return heads(engine.world) / before;
-    };
+  /**
+   * Measured directly rather than through eighteen years of simulation. Which
+   * side of one prosperity sits on is an emergent property that has now flipped
+   * twice -- removing the job leak in `risk.credit` put more workers against
+   * the same output, and capital deepening moved output per head again -- so a
+   * test that reads the sign out of a full run is testing the weather.
+   */
+  it('reads above one when a pool is getting better off and below when it is not', () => {
+    const world = newGame('uk2025').world;
+    const pool = personViews(world).find((p) => p.isCohort && p.workingAge > 0)!;
+    const perWorker = pool.incomeRate / pool.workingAge / Math.max(1, world.economy.priceIndex);
 
-    // At zero the prosperity term is 1 whatever the economy does, so births are
-    // one per worker per working lifetime: exact replacement.
-    const neutral = run(0);
-    expect(neutral).toBeGreaterThan(0.98);
-    expect(neutral).toBeLessThan(1.02);
+    pool.prosperityReference = perWorker;
+    expect(prosperity(world, pool)).toBeCloseTo(1, 6);
 
-    // Which way prosperity sits is an emergent property of the economy and has
-    // flipped before -- removing the job leak in `risk.credit` put more workers
-    // against the same output, so real income per worker now drifts down where
-    // it used to drift up. What the exponent must do is not flip: it amplifies
-    // whatever direction prosperity is pointing, so a strong response has to be
-    // further from replacement than a weak one on the same side.
-    const weak = run(0.5);
-    const strong = run(4);
-    expect(Math.abs(strong - neutral)).toBeGreaterThan(Math.abs(weak - neutral));
-    expect(Math.sign(strong - neutral)).toBe(Math.sign(weak - neutral));
-  }, 240_000);
+    pool.prosperityReference = perWorker / 1.2;
+    expect(prosperity(world, pool)).toBeGreaterThan(1);
+
+    pool.prosperityReference = perWorker * 1.2;
+    expect(prosperity(world, pool)).toBeLessThan(1);
+  });
+
+  it('bounds prosperity so a boom cannot double births nor a slump stop them', () => {
+    const world = newGame('uk2025').world;
+    const pool = personViews(world).find((p) => p.isCohort && p.workingAge > 0)!;
+    const perWorker = pool.incomeRate / pool.workingAge / Math.max(1, world.economy.priceIndex);
+
+    pool.prosperityReference = perWorker / 1000;
+    expect(prosperity(world, pool)).toBeLessThanOrEqual(1.5);
+
+    pool.prosperityReference = perWorker * 1000;
+    expect(prosperity(world, pool)).toBeGreaterThanOrEqual(0.5);
+  });
 
   /**
    * A pool holds one account between its members, so a death leaves the

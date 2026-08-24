@@ -214,6 +214,11 @@ describe('parameter definitions', () => {
       'MONTHS_PER_YEAR',
       'REVIEW_CYCLE',
       'SWEEP_INTERVAL',
+      // Guards against an accounting artefact, not a dial. A firm whose
+      // headcount collapsed faster than its balance sheet can show an absurd
+      // capital per worker for a month.
+      'MIN_FACTOR',
+      'MAX_FACTOR',
       'DEBT_SERVICE_HORIZON',
       'MIN_WINDOW_DAYS',
       'TRUST_WINDOW_DAYS',
