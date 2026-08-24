@@ -52,6 +52,10 @@ export function runJob(job: CalibrationJob): JobResult {
   engine.bus.on('company.failed', () => {
     failures += 1;
   });
+  // Latent firms fail too, in numbers no individual event could carry.
+  engine.bus.on('firms.populationChanged', (e) => {
+    failures += e.deaths;
+  });
   engine.bus.on('loan.originated', () => {
     originations += 1;
   });
@@ -61,12 +65,17 @@ export function runJob(job: CalibrationJob): JobResult {
   engine.run(ticks);
   const elapsed = Math.max(1, Date.now() - startedAt);
 
-  // Only firms simulated individually can fail: the rest of the economy is
-  // latent inside cohorts, which have no failure process of their own yet.
-  // Dividing by the whole population would understate the rate roughly
-  // fifteen-fold and quietly bias the whole scorecard. When cohort demography
-  // lands, this denominator becomes the whole population again.
-  const atRisk = Math.max(1, average(seriesOf(world.metrics, 'resolvedFirms')));
+  // Every firm in the economy, because every firm can now fail: resolved
+  // borrowers on their own probability of default, latent ones through
+  // `firms.demography`.
+  //
+  // This denominator used to be the resolved firms alone, because they were
+  // the only ones that could fail. That made the rate describe a population
+  // selected precisely for having borrowed -- it read 3.8% a year against a
+  // whole-economy target of 0.7%, and cost 40 of a 68-point score. It was
+  // never an economy failing five times too fast; it was two different
+  // populations either side of the same comparison.
+  const atRisk = Math.max(1, average(seriesOf(world.metrics, 'totalFirms')));
 
   return { job, summary: summarise(world, job, ticks, elapsed, failures, originations, atRisk) };
 }

@@ -5,7 +5,7 @@ import { incomeStatement } from '../ledger/statements.js';
 import { record } from '../metrics/recorder.js';
 import { regulatoryMetrics } from '../metrics/regulatory.js';
 import { firmViews } from '../agents/views.js';
-import { centralBank, heldBy, playerBank, resolvedCompanies } from '../world/state.js';
+import { centralBank, cohorts, heldBy, playerBank, resolvedCompanies } from '../world/state.js';
 import { PHASE, defineSystem } from './system.js';
 
 /**
@@ -35,6 +35,22 @@ function grossMargin(world: Parameters<typeof resolvedCompanies>[0]): number {
   }
   if (employees === 0 || weightedPrice === 0) return 0;
   return (weightedPrice - weightedCost) / weightedPrice;
+}
+
+/**
+ * Every company in the economy, latent or resolved.
+ *
+ * The denominator for anything meant to describe the corporate sector rather
+ * than the player's borrowers. Resolved firms are a selected few hundred --
+ * selected precisely for having borrowed -- and reading a whole-economy rate
+ * off them overstates it by more than an order of magnitude.
+ */
+function totalFirms(world: Parameters<typeof resolvedCompanies>[0]): number {
+  let total = resolvedCompanies(world).length;
+  for (const cohort of cohorts(world)) {
+    if (cohort.memberKind === 'company') total += cohort.count;
+  }
+  return total;
 }
 
 export const metricsSystem = defineSystem({
@@ -88,6 +104,7 @@ export const metricsSystem = defineSystem({
       priceLevel: world.economy.priceIndex,
       output: world.economy.outputUnits,
       resolvedFirms: resolvedCompanies(world).length,
+      totalFirms: totalFirms(world),
       grossMargin: grossMargin(world),
     });
 

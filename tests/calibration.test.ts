@@ -143,6 +143,42 @@ describe('what a job can vary', () => {
   });
 });
 
+describe('the insolvency rate describes the whole economy', () => {
+  /**
+   * The numerator and the denominator have to be about the same population.
+   * This measurement used to count only firms the player had lent to and
+   * divide by only firms the player had lent to, which is a coherent number
+   * about borrowers — but it was being compared against a whole-economy
+   * target, and read five times too high for that reason alone.
+   */
+  it('tracks the rate firms are actually set to fail at', () => {
+    const measure = (firmExitRate: number) =>
+      runJob({ seed: 5, years: 10, overrides: { firmExitRate } }).summary.insolvencyRate;
+
+    const low = measure(0.005);
+    const high = measure(0.02);
+
+    expect(low).toBeGreaterThan(0.005 * 0.6);
+    expect(low).toBeLessThan(0.005 * 1.8);
+    expect(high).toBeGreaterThan(0.02 * 0.6);
+    expect(high).toBeLessThan(0.02 * 1.8);
+    expect(high).toBeGreaterThan(low * 2);
+  }, 120_000);
+
+  it('counts the firms nobody has lent to', () => {
+    // With no failures in the pools at all, what is left is the handful of
+    // resolved borrowers failing against the whole population: an order of
+    // magnitude below target, not above it.
+    const quiet = runJob({
+      seed: 5,
+      years: 10,
+      overrides: { firmExitRate: 0 },
+    }).summary.insolvencyRate;
+    expect(quiet).toBeGreaterThan(0);
+    expect(quiet).toBeLessThan(0.001);
+  }, 120_000);
+});
+
 describe('parameter definitions', () => {
   it('only sweeps parameters that exist, with the baseline inside its range', () => {
     for (const parameter of PARAMETERS) {
