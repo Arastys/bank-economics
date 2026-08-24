@@ -179,6 +179,19 @@ migrations.set(9, (world) => {
   return world;
 });
 
+/**
+ * Profit has a way back to households. An old save has firms and banks that
+ * have retained every penny they ever made, and nothing here tries to undo
+ * that -- the accumulated reserves stand, and the first year end after the
+ * load distributes out of them like any other.
+ */
+migrations.set(10, (world) => {
+  const config = world.config as unknown as Record<string, unknown>;
+  config.firmDividendPayout = DEFAULT_CONFIG.firmDividendPayout;
+  config.bankDividendPayout = DEFAULT_CONFIG.bankDividendPayout;
+  return world;
+});
+
 export function load(json: string): WorldState {
   const snapshot = JSON.parse(json) as Snapshot;
   if (typeof snapshot?.version !== 'number' || !snapshot.world) {

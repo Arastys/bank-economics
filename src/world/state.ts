@@ -227,6 +227,17 @@ export interface SimConfig {
   liquidationCapitalIntensityBenefit: number;
   /** Corporation tax rate applied at year end. */
   corporationTaxRate: number;
+  /**
+   * Share of post-tax profit a firm hands to its owners at the year end.
+   *
+   * Without this, profit closes to retained earnings and stays there for
+   * ever: the economy has no route by which anyone is paid for owning
+   * anything, and is only stable while nobody makes money. See
+   * `docs/FLOWS.md`.
+   */
+  firmDividendPayout: number;
+  /** The same for banks, which retain more because capital is regulated. */
+  bankDividendPayout: number;
   /** Regulatory minimums, reported but not yet enforced. */
   minimumCapitalRatio: number;
   minimumLiquidityRatio: number;
@@ -336,7 +347,7 @@ export interface WorldState {
   config: SimConfig;
 }
 
-export const WORLD_VERSION = 10;
+export const WORLD_VERSION = 11;
 
 export const DEFAULT_CONFIG: SimConfig = {
   applicationValidityDays: 14,
@@ -393,6 +404,8 @@ export const DEFAULT_CONFIG: SimConfig = {
   workoutHaircutFactor: 0.5,
   liquidationCapitalIntensityBenefit: 0.08,
   corporationTaxRate: 0.25,
+  firmDividendPayout: 0.5,
+  bankDividendPayout: 0.4,
   minimumCapitalRatio: 0.08,
   minimumLiquidityRatio: 1.0,
   depositProtectionLimit: 8_500_000 as Money, // £85,000

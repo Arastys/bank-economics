@@ -69,6 +69,13 @@ export interface GameEvents {
   'bank.breachedLimit': { bankId: EntityId; limit: string; value: number; threshold: number };
   'bank.periodClosed': { bankId: EntityId; profit: Money };
 
+  /**
+   * Profit leaving the firms and banks that made it, for the households
+   * that own them. Individual payers are not named: this is one netted
+   * transaction across the whole economy.
+   */
+  'dividends.paid': { tick: number; total: Money; payers: number };
+
   'notice': { severity: 'info' | 'warning' | 'critical'; message: string };
 }
 

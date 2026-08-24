@@ -53,6 +53,8 @@ export const PARAMETERS: Parameter[] = [
   { key: 'liquidationVariance', label: 'Recovery variance', min: 0, max: 0.3, step: 0.02 },
   { key: 'workoutHaircutFactor', label: 'Orderly sale advantage', min: 0.1, max: 1, step: 0.1 },
   { key: 'cohortApplicationRate', label: 'Credit demand rate', min: 0.0001, max: 0.003, step: 0.0002 },
+  { key: 'firmDividendPayout', label: 'Share of firm profit distributed', min: 0, max: 0.95, step: 0.05 },
+  { key: 'bankDividendPayout', label: 'Share of bank profit distributed', min: 0, max: 0.95, step: 0.05 },
 ];
 
 export function clampToRange(parameter: Parameter, value: number): number {

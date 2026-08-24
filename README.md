@@ -32,6 +32,7 @@ node scripts/calibrate.js score  # how balanced is the economy right now?
 | **Markets** | A goods market that clears on price, a gilt curve, credit spreads, an interbank rate. |
 | **Labour** | A supply constraint on hiring from the working-age population, and pay that follows prices and labour-market tightness with downward nominal rigidity. |
 | **Policy** | A Monetary Policy Committee setting Bank Rate off inflation and the output gap; a state that taxes and spends. |
+| **Ownership** | Firms and banks pay dividends out of post-tax profit at the year end, limited by accumulated reserves and by cash, so profit reaches the households that own them. |
 | **Regulation** | CET1, risk-weighted assets, capital and leverage ratios, LCR, FSCS-covered deposits — computed and reported, not yet enforced. |
 
 ## The six decisions that make it extensible
@@ -173,10 +174,11 @@ Known rough edges, measured over 24 seeds and ten simulated years:
   its −0.87% net interest margin and for the rival sector spending its way to
   −£4.3bn of equity by year twenty. The accounts balance perfectly throughout,
   which is what makes it hard to spot. See `docs/FLOWS.md`.
-- **There are no dividends anywhere.** Firms and banks close the year to
-  retained earnings and nothing ever leaves, so household income is wages,
-  deposit interest, bank operating costs and recycled tax — profit is not in
-  it. The model is only stable while nobody makes money.
+- **Almost nothing in the economy is profitable.** Firms and banks now pay
+  dividends, so profit has a route back to households, and what that exposed
+  is how little travels down it: the number of entities paying one falls from
+  33 in year one to five or six by year twelve. Gross margins collapse towards
+  zero over a decade, which is the same fact seen from the other end.
 - **Monetary policy barely works.** Bank Rate reaches investment spending, but
   pinning it across a 900 basis point span moves inflation by a fraction of a
   point. Restraining demand here changes output rather than prices. The

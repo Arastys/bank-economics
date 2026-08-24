@@ -1,10 +1,10 @@
-import { ZERO, allocate, scale, type Money } from '../core/money.js';
+import { ZERO, allocate, atLeastZero, min, scale, type Money } from '../core/money.js';
 import { isMonthEnd, isYearEnd, toDate } from '../core/time.js';
 import { AC } from '../ledger/accounts.js';
 import { closePeriod, incomeStatement } from '../ledger/statements.js';
 import { personViews } from '../agents/views.js';
 import { clearMarket, payBetween, spendable, type MarketLeg } from '../world/transfer.js';
-import { entitiesOfKind } from '../world/state.js';
+import { entitiesOfKind, type WorldState } from '../world/state.js';
 import { credit, debit, naturalBalance, ownerIds, post, type LedgerState } from '../ledger/ledger.js';
 import { PHASE, defineSystem } from './system.js';
 
@@ -80,6 +80,7 @@ export const yearEndSystem = defineSystem({
     if (!isYearEnd(ctx.tick)) return;
 
     const taxRate = world.config.corporationTaxRate;
+    const dividends: MarketLeg[] = [];
     for (const ownerId of ownerIds(ledger)) {
       const entity = world.entities[ownerId];
       if (!entity) continue;
@@ -104,6 +105,16 @@ export const yearEndSystem = defineSystem({
       if (entity.kind === 'bank') {
         ctx.emit('bank.periodClosed', { bankId: ownerId, profit });
       }
+
+      const dividend = dividendFrom(world, ledger, entity, profit);
+      if (dividend > 0) {
+        dividends.push({ id: ownerId, amount: dividend, contra: AC.RETAINED_EARNINGS });
+      }
+    }
+
+    const paid = payDividends(ctx, dividends);
+    if (paid > 0) {
+      ctx.emit('dividends.paid', { tick: ctx.tick, total: paid, payers: dividends.length });
     }
 
     spendPublicMoney(ctx);
@@ -112,6 +123,73 @@ export const yearEndSystem = defineSystem({
     ctx.emit('sim.yearEnded', { tick: ctx.tick, year: toDate(ctx.tick).year });
   },
 });
+
+/**
+ * What one firm or bank hands to its owners out of the year just closed.
+ *
+ * Three limits, and all three are real ones. A loss pays nothing. A company
+ * cannot distribute more than it has in reserves -- accumulated losses have
+ * to be made good before anybody is paid again, which is what stops a bank
+ * that is spending its way through its equity from also paying a dividend on
+ * a good year. And a dividend is cash, so it cannot exceed the cash there is.
+ *
+ * Households and the state own things; they do not pay dividends themselves.
+ */
+export function dividendFrom(
+  world: WorldState,
+  ledger: LedgerState,
+  entity: { id: string; kind: string; memberKind?: string },
+  profit: Money,
+): Money {
+  if (profit <= 0) return ZERO;
+  const distributes =
+    entity.kind === 'bank' ||
+    entity.kind === 'company' ||
+    (entity.kind === 'cohort' && entity.memberKind === 'company');
+  if (!distributes) return ZERO;
+
+  const ratio =
+    entity.kind === 'bank' ? world.config.bankDividendPayout : world.config.firmDividendPayout;
+  if (ratio <= 0) return ZERO;
+
+  const reserves = atLeastZero(naturalBalance(ledger, entity.id, AC.RETAINED_EARNINGS));
+  return min(min(scale(profit, ratio), reserves), spendable(world, ledger, entity.id));
+}
+
+/**
+ * Profit going back to the people who own the firms.
+ *
+ * Split by headcount, the same way bank running costs and public spending
+ * are. Dividend income in the real economy is concentrated in wealth rather
+ * than spread by head, and weighting it that way is a change worth making --
+ * but it is a change to who gets richer, not to whether profit returns at
+ * all, and those are two different questions.
+ */
+function payDividends(
+  ctx: { tick: number; ledger: LedgerState; world: WorldState },
+  payers: MarketLeg[],
+): Money {
+  const total = payers.reduce((t, leg) => (t + leg.amount) as Money, ZERO);
+  if (total <= 0) return ZERO;
+
+  const people = personViews(ctx.world);
+  const shares = allocate(total, people.map((h) => h.count));
+  const payees: MarketLeg[] = [];
+  people.forEach((h, i) => {
+    const share = shares[i] ?? ZERO;
+    if (share > 0) payees.push({ id: h.id, amount: share, contra: AC.DIVIDEND_INCOME });
+  });
+  if (payees.length === 0) return ZERO;
+
+  clearMarket(ctx.world, ctx.ledger, {
+    tick: ctx.tick,
+    kind: 'equity.dividends',
+    description: 'Dividends',
+    payers,
+    payees,
+  });
+  return total;
+}
 
 /**
  * The state spends what it collects.

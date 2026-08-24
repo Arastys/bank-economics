@@ -53,6 +53,7 @@ export const AC = {
   TRADING_INCOME: 'tradingIncome',
   REVENUE: 'revenue',
   WAGE_INCOME: 'wageIncome',
+  DIVIDEND_INCOME: 'dividendIncome',
   DEBT_FORGIVEN: 'debtForgiven',
 
   // Expenses
@@ -111,6 +112,7 @@ const KIND_BY_CODE: Record<string, AccountKind> = {
   [AC.TRADING_INCOME]: 'income',
   [AC.REVENUE]: 'income',
   [AC.WAGE_INCOME]: 'income',
+  [AC.DIVIDEND_INCOME]: 'income',
   [AC.DEBT_FORGIVEN]: 'income',
   [AC.INTEREST_EXPENSE]: 'expense',
   [AC.OPERATING_EXPENSE]: 'expense',

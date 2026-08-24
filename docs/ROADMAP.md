@@ -28,13 +28,14 @@ deflation: that moves the asset side from 0% to 100% while the liability side
 is already at 86%, so the economy swings from being quietly subsidised by the
 banks to paying £378m a year with no route back.
 
-The second defect is the reason there is no route back. **There are no
-dividends anywhere in `src/`.** Firms and banks close the year to
-`RETAINED_EARNINGS` and nothing ever leaves. Household income is wages,
-deposit interest, bank operating costs and recycled tax — profit is not in it.
-The model is therefore only stable while nobody makes money, which is
-consistent with gross margins collapsing towards zero and with both sectors
-currently running *negative* retained earnings.
+The second defect was the reason there was no route back: there were no
+dividends anywhere in `src/`, so profit closed to `RETAINED_EARNINGS` and
+stayed there and the model was only stable while nobody made money. **That is
+now fixed** — see step 2 below — and what it exposed is worth keeping in view:
+**almost nothing in this economy is profitable.** The number of entities
+paying a dividend falls from 33 in year one to five or six by year twelve,
+which is what gross margins collapsing towards zero looks like from the other
+end. The return path exists; there is very little travelling down it.
 
 ### The rest of the card, once that is set aside
 
@@ -79,9 +80,23 @@ makes the next one safe, and doing step 3 first is what caused the deflation.
    reaches −£865m by year ten where it used to reach +£653m, and −£4.28bn by
    year twenty where it used to reach −£875m. It was already heading there;
    this makes it arrive sooner. **Step 3 is what pays for it.**
-2. **Dividends.** Firms and banks distribute a share of profit to person
-   cohorts. This is the missing return path, and it has to exist before any
-   sector is allowed to be profitable.
+2. ~~**Dividends.**~~ **Done.** Firms and banks now distribute a share of
+   post-tax profit to person cohorts at the year end — `firmDividendPayout`
+   0.5, `bankDividendPayout` 0.4, both swept. A dividend cannot exceed
+   accumulated reserves or available cash, which is what stops a bank that is
+   spending its way through its equity from paying out on a good year.
+
+   Over twenty years it runs £180–450m a year. The score went **37.4 ± 2.3 →
+   51.4 ± 1.0**, and that is expected rather than a regression: this is the
+   second injection of household income in a row with no offsetting drain, so
+   inflation went 3.83% → 4.56% and unemployment 1.25% → 0.98%. Survival held
+   at 24 of 24. **Step 3 is the drain**, and step 4 is where any of this gets
+   tuned.
+
+   Dividends are split by headcount, the same way bank running costs and
+   public spending are. Real dividend income is concentrated in wealth, and
+   weighting it that way is worth doing — but it changes who gets richer
+   rather than whether profit returns at all, and those are separate questions.
 3. **Contracts on the cohort balance sheet, both sides together.** Loans *and*
    company-cohort deposits. Activated together the flows partly offset;
    activated one at a time they do not, and the economy tips.

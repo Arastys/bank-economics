@@ -36,9 +36,9 @@ the balance sheet the whole time.
 | Bank operating costs | banks | people | `accounting.periods`, monthly | **live** |
 | Corporation tax | firms + banks | government | `accounting.yearEnd` | **live** |
 | Public spending | government | people | `accounting.yearEnd`, spends the year's receipts | **live** |
-| Firm profit | firms | — | closes to `RETAINED_EARNINGS` | **no outflow exists** |
-| Bank profit | banks | — | closes to `RETAINED_EARNINGS` | **no outflow exists** |
-| Dividends | anyone | anyone | — | **not modelled at all** |
+| Firm profit | firms | own reserves | `accounting.yearEnd` closes the P&L | **live** |
+| Bank profit | banks | own reserves | `accounting.yearEnd` closes the P&L | **live** |
+| Dividends | firms + banks | people | `accounting.yearEnd`, out of reserves | **live** |
 
 ## How much of the balance sheet is scenery
 
@@ -52,8 +52,10 @@ the balance sheet the whole time.
 The asymmetry is the important part, and it is not a calibration problem. By
 year ten the banking sector **pays interest on 86% of its funding and earns
 interest on 0.1% of its lending**. It is loss-making by construction, which is
-what the accumulated −£2.43bn of bank retained earnings at year twenty is, and
-what the sector's −0.87% net interest margin is.
+what the sector's −0.87% net interest margin is, and what −£5.52bn of
+accumulated bank losses by year twenty is — a figure that is part inert loan
+book and part the running costs the rivals now pay out of equity because that
+book earns them nothing.
 
 While that holds, the banks are quietly handing households an unfunded income
 stream. It is why activating the loan book on its own was so violent: that
@@ -63,31 +65,45 @@ return path, and deflates.
 
 ## The circular flow, and where it leaks
 
-Household income has four sources here: wages, deposit interest, bank operating
-costs, and recycled tax. **Profit is not one of them.** Firms and banks close
-their year to `RETAINED_EARNINGS` and there is no dividend anywhere in `src/`.
+Household income has five sources here: wages, deposit interest, bank operating
+costs, recycled tax, and — since `firmDividendPayout` and `bankDividendPayout`
+— dividends. Profit used to close to `RETAINED_EARNINGS` and stay there, which
+meant **the model was only stable while nobody made money**: a profitable firm
+sector accumulated cash households were never paid and therefore could not
+spend.
 
-The consequence is structural rather than parametric: **the model is only
-stable while nobody makes money.** A profitable firm sector accumulates cash
-that households were never paid and therefore cannot spend; a profitable
-banking sector does the same. It is consistent with gross margins collapsing
-towards zero over a decade, and with the fact that both sectors currently run
-*negative* retained earnings — firms −£0.73bn, banks −£2.43bn by year twenty.
-Nobody is profitable, so the missing return path has never bitten.
+Tax already worked this way and the code says why: *"Tax that is taken out of
+the circular flow and never returned is a slow drain on demand"*. The same
+argument applies to profit and had never been carried across.
 
-It will bite the moment the balance sheet is made live. Three things have to
-exist before that is safe:
+What the distribution actually looks like is worth knowing, because it says
+something about the economy rather than about dividends. Over twenty years it
+runs £180–450m a year, and the number of entities paying it falls from 33 in
+year one to five or six by year twelve. **Almost nothing in this economy is
+profitable** — gross margins collapse towards zero over a decade — so the
+return path exists but very little travels down it. That is a finding about
+the pricing and margin blocks, and it is on the roadmap rather than here.
+
+Two limits are worth knowing about because they are load-bearing rather than
+decorative: a dividend cannot exceed accumulated reserves, and cannot exceed
+cash. The first is what stops a bank spending its way through its equity from
+also paying out on a good year, which the rival banks would otherwise do.
+
+One thing is still missing. Three things had to exist before the balance sheet
+could safely be made live:
 
 1. ~~rival banks with operating costs~~ — **done**. They pay at the player's
    own cost-to-deposits ratio, 2.2% of deposits a year, so the sector's
-   running costs reach households as pay. See `docs/ROADMAP.md`.
-2. dividends, so retained profit has any route back at all;
+   running costs reach households as pay.
+2. ~~dividends~~ — **done**, as above.
 3. contracts on **both** sides of the cohort balance sheet, activated together
-   so the flows partly offset rather than draining one way.
+   so the flows partly offset rather than draining one way. **Still to do**,
+   and it is now the only thing between here and a live balance sheet. See
+   `docs/ROADMAP.md`.
 
-Tax already works this way and the code says why: *"Tax that is taken out of
-the circular flow and never returned is a slow drain on demand"*. The same
-argument applies to profit and was never carried across.
+Steps 1 and 2 both add household income with no extra output behind them, so
+the economy is running hot — inflation 4.56%, unemployment 0.98% — and it is
+meant to be. Step 3 is the offsetting drain, and step 4 retunes what is left.
 
 ## Level of detail: what is aggregated, and what that costs
 
