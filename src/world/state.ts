@@ -91,13 +91,12 @@ export interface SimConfig {
    * target buffer, which is a stock -- see `propensityOutOfIncome`.
    *
    * Defaults to zero, which is the honest reading of the evidence rather than
-   * a missing feature. Restraining consumption in this economy raises
-   * unemployment without lowering inflation, because the price level here is
-   * set by costs: the cost anchor and downward wage rigidity floor prices, so
-   * less spending buys less output at the same price. At a sensitivity of 1,
-   * inflation goes *up* 0.5 points and unemployment up 1.7. The channel is
-   * built, tested and swept, and it is worth turning on the day wages respond
-   * to slack.
+   * a missing feature. This economy runs a boom-bust cycle, and restraining
+   * consumption makes the swings bigger rather than the mean lower: at a
+   * sensitivity of 1 inflation goes *up* 0.5 points and unemployment up 1.7,
+   * and at 2 the cycle reaches 27% unemployment. The channel is built, tested
+   * and swept, and worth turning on once the cycle is damped. See
+   * docs/ROADMAP.md.
    */
   savingsRateSensitivity: number;
   /** How quickly households' smoothed income follows actual receipts. */

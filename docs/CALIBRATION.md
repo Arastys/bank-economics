@@ -231,6 +231,41 @@ prices are hand-set and need not be mutually consistent, so the first few years
 are the model arguing with its own initial conditions. Worth understanding
 before anyone trusts a three-year number either.
 
+## What the score is actually made of
+
+At the shipped defaults, twenty-four seeds, ten years — the first campaign run
+at a horizon outside the settling excursion:
+
+| component | penalty | share |
+| --- | ---: | ---: |
+| corporate insolvency | 41.7 | 60% |
+| inflation volatility | 15.8 | 23% |
+| inflation level | 6.3 | 9% |
+| everything else | 5.7 | 8% |
+
+Two things follow, and both redirect effort.
+
+**Insolvency is the model, not the credit policy.** Every parameter governing
+recovery and loss — `lossGivenDefault`, `liquidationHaircut`,
+`liquidationVariance`, `liquidationCyclicality`, `workoutHaircutFactor` — moves
+the score by no measurable amount at 24 seeds. The largest term in the
+objective cannot be touched by any knob describing the thing it measures.
+Firms are simply failing, into a population nothing replenishes, which points
+at demography rather than at credit.
+
+**It is the swing, not the miss.** Inflation volatility costs two and a half
+times what the inflation level does. Tuning the level is tuning the smaller
+half of the smaller problem.
+
+The policy parameters — `taylorInflationWeight`, `taylorOutputWeight`,
+`neutralRealRate` — still register no measurable effect even now that Bank Rate
+reaches investment spending. Wiring the rate to demand was necessary and did
+not make monetary policy matter, which is written up in `docs/ROADMAP.md`.
+
+`savingsBufferDays` is worse in *both* directions at this horizon (+68 at
+×0.7, +89 at ×1.3), which settles a question an earlier five-year campaign got
+backwards: it is sitting at a local optimum and should not move.
+
 ## Watch the denominator
 
 A metric can flatter the model without anyone lying. Corporate insolvency was

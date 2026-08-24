@@ -160,15 +160,40 @@ in this economy does not lower prices, it lowers output:
 | 1 | 4.26% | 4.96% | 7.19% |
 | 2 | 6.19% | 7.59% | 10.19% |
 
-Inflation goes *up* as demand is restrained. That is stagflation, and it is
-structural: the price level here is set by costs. The cost anchor holds prices
-at unit cost, wages are indexed to inflation and to labour tightness, and
-`maxMonthlyWageCut` stops them falling fast. So less spending means fewer
-goods at the same price, not the same goods cheaper. **The missing link is not
-the rate reaching demand. It is demand reaching prices.**
+Inflation goes *up* as demand is restrained. The first reading of that was
+that prices here are cost-determined and demand never reaches them. **That was
+wrong, and tracing a run shows it plainly.** Prices reach demand violently —
+this economy runs a boom-bust cycle, and restraining demand makes the swings
+bigger rather than the level lower. At the shipped defaults, twelve years:
+
+| year | unemployment | wage/employee | unit cost | price | markup | inflation |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 2027 | 0.7% | £141.01 | £82.04 | £89.34 | 8.9% | 1.0% |
+| 2029 | 7.2% | £190.95 | £111.49 | £109.65 | −1.6% | 12.2% |
+| 2030 | 11.1% | £197.32 | £115.86 | £122.72 | 5.9% | 12.0% |
+| 2033 | 1.9% | £186.20 | £109.81 | £121.73 | 10.9% | −2.1% |
+| 2036 | 4.4% | £206.34 | £122.27 | £125.00 | 2.2% | 5.8% |
+
+Unemployment runs 0.5% to 11%, inflation −2% to +12%, and the markup swings
+from −1.6% to 12.7%. With the consumption channel forced on the same cycle
+reaches 0.2%–27.5% unemployment and ±23% inflation. The mean is
+insensitive to demand because the *cycle* sets it, not the level of spending.
+
+Two supporting facts. Relaxing downward wage rigidity tenfold, from 0.2% a
+month to a symmetric 2%, moves inflation from 3.81% to 3.66% — so the ratchet
+is not the inflation engine either. And at 24 seeds over ten years the baseline
+score of 69.5 is 41.7 insolvency, **15.8 inflation volatility** and only 6.3
+inflation level: the swing is two and a half times the miss.
+
+The prime suspect is that wage setting is perfectly synchronised.
+`src/systems/firms.ts` computes one `wageGrowth` from one economy-wide
+tightness number and applies it to every firm on the same monthly tick. Real
+wage setting is staggered across the year, which is the standard damper for
+exactly this pathology, and nothing here staggers anything.
 
 The consumption channel therefore ships switched off — built, tested and swept,
-worth turning on the day the wage-price block responds to slack. The investment
+worth turning on once the cycle is damped, because until then extra demand
+restraint buys amplitude rather than control. The investment
 channel ships at 2, which costs 2.5±1.1 points of score at ten years and
 −0.6±12.0 at twenty: the ten-year cost is the channel amplifying the settling
 excursion, not a standing one.
