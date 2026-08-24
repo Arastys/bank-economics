@@ -5,6 +5,7 @@ import {
   PRESETS,
   buildStudies,
   jobCount,
+  parseInvocation,
   runYears,
   seedsFor,
 } from '../src/calibration/campaign.js';
@@ -187,5 +188,44 @@ describe('reading results back', () => {
     const text = reportCampaign(file);
     expect(text).toContain('FAILED');
     expect(text).toContain('no usable runs');
+  });
+});
+
+/**
+ * The failure this exists to prevent, which cost an hour: an argument nobody
+ * recognised fell through to the default preset, so `campaign smoke` -- the
+ * obvious thing to type -- silently ran the standard campaign. Twenty-eight
+ * runs became eleven hundred and nothing on screen said why.
+ */
+describe('what the campaign script was asked to do', () => {
+  const defaults = { out: 'campaign.json.gz' };
+  const parse = (...argv: string[]) => parseInvocation(argv, defaults);
+
+  it('takes a bare preset name, which is how everyone types it', () => {
+    expect(parse('smoke')).toMatchObject({ command: 'run', preset: 'smoke' });
+    expect(parse('deep', '--workers', '20')).toMatchObject({ preset: 'deep', workers: 20 });
+  });
+
+  it('still takes the documented flag form', () => {
+    expect(parse('run', '--preset', 'smoke')).toMatchObject({ command: 'run', preset: 'smoke' });
+    expect(parse('--preset', 'quick')).toMatchObject({ preset: 'quick' });
+  });
+
+  it('refuses an argument it does not recognise rather than guessing', () => {
+    expect(() => parse('smoek')).toThrow(/Unknown argument "smoek"/);
+    expect(() => parse('--preset', 'enormous')).toThrow(/Unknown preset "enormous"/);
+  });
+
+  it('defaults to the standard campaign only when asked for nothing', () => {
+    expect(parse()).toMatchObject({ command: 'run', preset: 'standard', out: 'campaign.json.gz' });
+  });
+
+  it('does not mistake a flag value for a preset', () => {
+    expect(parse('--out', 'smoke')).toMatchObject({ preset: 'standard', out: 'smoke' });
+  });
+
+  it('reads a report path either way round', () => {
+    expect(parse('report', 'runs.json.gz')).toEqual({ command: 'report', path: 'runs.json.gz' });
+    expect(parse('report')).toEqual({ command: 'report', path: 'campaign.json.gz' });
   });
 });

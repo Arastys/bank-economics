@@ -8,12 +8,18 @@ the context that produced it.
 
 ```bash
 npm run build
-node scripts/campaign.js run --preset standard --workers 20
+node scripts/campaign.js smoke
+node scripts/campaign.js deep --workers 20
 node scripts/campaign.js report campaign.json.gz
 ```
 
-Start with `--preset smoke`. It takes under a minute and proves the whole path
-works on your machine before you commit an evening to it.
+The preset is the first argument; `--preset <name>` also works. Anything the
+runner does not recognise stops it rather than falling through to a default,
+because a typo that silently runs a forty-times-longer campaign is not a
+mistake you find out about quickly.
+
+Start with `smoke`. It takes under a minute and proves the whole path works on
+your machine before you commit an evening to it.
 
 ## Presets
 

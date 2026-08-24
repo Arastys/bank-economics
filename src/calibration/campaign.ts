@@ -261,3 +261,53 @@ export function runYears(studies: Study[]): number {
 export function jobCount(studies: Study[]): number {
   return studies.reduce((total, study) => total + study.jobs.length, 0);
 }
+
+export type Invocation =
+  | { command: 'report'; path: string }
+  | { command: 'run'; preset: string; workers?: number; out: string };
+
+/**
+ * What the campaign script was asked to do.
+ *
+ * Split out here so it can be tested. The failure it exists to prevent is
+ * silent: an argument nobody recognises used to fall straight through to the
+ * default preset, so `campaign smoke` -- the obvious thing to type -- ran the
+ * standard campaign instead. Twenty-eight runs and twenty seconds became
+ * eleven hundred runs and an hour, with nothing on screen to say why. Someone
+ * running these on their own machine deserves better than that.
+ */
+export function parseInvocation(argv: string[], defaults: { out: string }): Invocation {
+  const flag = (name: string): string | undefined => {
+    const index = argv.indexOf(`--${name}`);
+    return index >= 0 ? argv[index + 1] : undefined;
+  };
+  const positional = argv.filter(
+    (arg, i) => !arg.startsWith('--') && !(i > 0 && argv[i - 1]?.startsWith('--')),
+  );
+
+  if (positional[0] === 'report') {
+    return { command: 'report', path: positional[1] ?? flag('in') ?? defaults.out };
+  }
+
+  // A bare preset name is how everyone types it, so accept it -- but only when
+  // it is a preset. Anything else is a mistake worth stopping for.
+  const named = positional[0] === 'run' ? positional[1] : positional[0];
+  if (named !== undefined && !(named in PRESETS)) {
+    throw new Error(
+      `Unknown argument "${named}". Expected "report" or one of: ${Object.keys(PRESETS).join(', ')}`,
+    );
+  }
+
+  const preset = flag('preset') ?? named ?? 'standard';
+  if (!(preset in PRESETS)) {
+    throw new Error(`Unknown preset "${preset}". Try: ${Object.keys(PRESETS).join(', ')}`);
+  }
+
+  const workers = flag('workers');
+  return {
+    command: 'run',
+    preset,
+    workers: workers === undefined ? undefined : Number(workers),
+    out: flag('out') ?? defaults.out,
+  };
+}

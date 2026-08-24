@@ -1,8 +1,9 @@
 /**
  * Run a calibration campaign and write a results file.
  *
- *   node scripts/campaign.js run --preset standard --workers 20
- *   node scripts/campaign.js report campaign.json
+ *   node scripts/campaign.js smoke
+ *   node scripts/campaign.js deep --workers 20
+ *   node scripts/campaign.js report campaign.json.gz
  *
  * A campaign is a set of studies, each one a question with the runs needed to
  * answer it. The output is a single self-describing JSON file -- it records
@@ -20,21 +21,21 @@ import { gunzipSync, gzipSync } from 'node:zlib';
 import { execSync } from 'node:child_process';
 import { Worker } from 'node:worker_threads';
 import { fileURLToPath } from 'node:url';
-import { CAMPAIGN_FORMAT, PRESETS, buildStudies, jobCount, runYears, seedsFor } from '../dist/src/calibration/campaign.js';
+import { CAMPAIGN_FORMAT, PRESETS, buildStudies, jobCount, parseInvocation, runYears, seedsFor } from '../dist/src/calibration/campaign.js';
 import { reportCampaign } from '../dist/src/calibration/report.js';
 import { DEFAULT_TARGETS, score } from '../dist/src/calibration/targets.js';
 import { runJob } from '../dist/src/calibration/harness.js';
 
-const argv = process.argv.slice(2);
-const command = argv[0] ?? 'run';
-const flag = (name, fallback) => {
-  const index = argv.indexOf(`--${name}`);
-  return index >= 0 && argv[index + 1] !== undefined ? argv[index + 1] : fallback;
-};
+let invocation;
+try {
+  invocation = parseInvocation(process.argv.slice(2), { out: 'campaign.json.gz' });
+} catch (error) {
+  console.error(String(error?.message ?? error));
+  process.exit(1);
+}
 
-if (command === 'report') {
-  const path = argv[1] ?? flag('in', 'campaign.json.gz');
-  console.log(reportCampaign(readCampaign(path)));
+if (invocation.command === 'report') {
+  console.log(reportCampaign(readCampaign(invocation.path)));
   process.exit(0);
 }
 
@@ -45,16 +46,11 @@ function readCampaign(path) {
   return JSON.parse(text);
 }
 
-const presetName = flag('preset', 'standard');
-const preset = PRESETS[presetName];
-if (!preset) {
-  console.error(`Unknown preset "${presetName}". Try: ${Object.keys(PRESETS).join(', ')}`);
-  process.exit(1);
-}
-const workerCount = Math.max(1, Number(flag('workers', os.cpus().length)));
+const preset = PRESETS[invocation.preset];
+const workerCount = Math.max(1, invocation.workers || os.cpus().length);
 // Gzipped by default: these files are for handing to someone else, and JSON
 // this repetitive compresses about tenfold.
-const outPath = flag('out', 'campaign.json.gz');
+const outPath = invocation.out;
 
 const studies = buildStudies(preset);
 const totalJobs = jobCount(studies);
