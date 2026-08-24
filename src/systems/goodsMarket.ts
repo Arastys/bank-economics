@@ -4,7 +4,7 @@ import { AC, type AccountCode } from '../ledger/accounts.js';
 import { balance, credit, debit, post, type LedgerState } from '../ledger/ledger.js';
 import { clearMarket, spendable, type MarketLeg } from '../world/transfer.js';
 import { realRateGap, type SimConfig, type WorldState } from '../world/state.js';
-import { firmViews, personViews, type FirmView } from '../agents/views.js';
+import { firmViews, personViews, type FirmView, type PersonView } from '../agents/views.js';
 import { PHASE, defineSystem } from './system.js';
 
 /** Five working days in seven. */
@@ -167,13 +167,7 @@ function collectBuyers(world: WorldState, ledger: LedgerState, firms: FirmView[]
         person.lastIncome * world.config.incomeSmoothing,
     );
     const savings = spendable(world, ledger, person.id);
-    const budget = consumptionBudget(
-      person.propensityToConsume,
-      person.incomeRate,
-      savings,
-      world.config,
-      rateGap,
-    );
+    const budget = poolBudget(person, savings, world.config, rateGap);
     if (budget > 0) buyers.push({ id: person.id, budget, contra: AC.CONSUMPTION });
   }
 
@@ -209,17 +203,88 @@ function collectBuyers(world: WorldState, ledger: LedgerState, firms: FirmView[]
 export function consumptionBudget(
   propensityToConsume: number,
   incomeRate: Money,
+  bufferBase: Money,
   savings: Money,
   config: SimConfig,
   rateGap = 0,
 ): Money {
-  const buffer = incomeRate * config.savingsBufferDays;
+  // `bufferBase` is the income the cushion is measured against, which is not
+  // always the income being spent from: somebody out of work still defends a
+  // cushion sized to the living they are used to. It must stay a fast-moving
+  // figure. Keying the buffer to a slow one -- a year's smoothing, so it holds
+  // its level through a downturn -- looks like prudence and behaves like a long
+  // lag in a feedback loop: spending fell against a cushion that had not
+  // noticed, and inflation volatility went from 4.4 to 59.6.
+  const buffer = bufferBase * config.savingsBufferDays;
   const wanted = round(
     propensityOutOfIncome(propensityToConsume, config, rateGap) * incomeRate +
       config.savingsAdjustment * (savings - buffer),
   );
   // Nobody spends money they do not have, and nobody spends less than nothing.
   return min(atLeastZero(wanted), atLeastZero(savings));
+}
+
+/**
+ * What a person -- or a pool of them -- puts on the counter today.
+ *
+ * A pool is not one average person, and averaging its members is not a
+ * harmless simplification. Its employed members draw a wage and its unemployed
+ * members draw nothing, and the two spend very differently: somebody out of
+ * work is a long way below the cushion they are defending, so the savings term
+ * turns sharply negative and they cut hard. Blending them into one imaginary
+ * person on the mean income hides that entirely, which is most of why a
+ * downturn here used to cost output without anybody visibly tightening their
+ * belt.
+ *
+ * Savings are assumed shared evenly per head within a pool, which is a
+ * simplification and a generous one: in reality the newly unemployed hold less
+ * than average.
+ */
+export function poolBudget(
+  person: PersonView,
+  savings: Money,
+  config: SimConfig,
+  rateGap: number,
+): Money {
+  const heads = person.count;
+  if (heads <= 0) return ZERO;
+  const working = Math.max(0, Math.min(heads, person.employed));
+  const idle = heads - working;
+  if (idle <= 0.5 || working <= 0) {
+    return consumptionBudget(
+      person.propensityToConsume,
+      person.incomeRate,
+      person.incomeRate,
+      savings,
+      config,
+      rateGap,
+    );
+  }
+
+  const perHeadSavings = (savings / heads) as Money;
+  // The wage bill lands on the employed, so they each draw more than the pool
+  // average. The cushion is per head either way: being out of work does not
+  // lower the living somebody is used to.
+  const perHeadIncome = (person.incomeRate / heads) as Money;
+  const perWorkerIncome = (person.incomeRate / working) as Money;
+
+  const employedEach = consumptionBudget(
+    person.propensityToConsume,
+    perWorkerIncome,
+    perHeadIncome,
+    perHeadSavings,
+    config,
+    rateGap,
+  );
+  const idleEach = consumptionBudget(
+    person.propensityToConsume,
+    ZERO,
+    perHeadIncome,
+    perHeadSavings,
+    config,
+    rateGap,
+  );
+  return atLeastZero(round(working * employedEach + idle * idleEach));
 }
 
 /**

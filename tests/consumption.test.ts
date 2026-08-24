@@ -65,7 +65,7 @@ describe('people save towards a buffer, not for ever', () => {
 
   it('never spends money it does not have', () => {
     const { config } = newGame('uk2025').world;
-    expect(consumptionBudget(0.95, pounds(100) as Money, ZERO, config)).toBe(ZERO);
+    expect(consumptionBudget(0.95, pounds(100) as Money, pounds(100) as Money, ZERO, config)).toBe(ZERO);
   });
 });
 
@@ -74,5 +74,5 @@ function budgetAt(days: number): number {
   const { config } = newGame('uk2025').world;
   const income = pounds(100) as Money;
   const savings = (income * days) as Money;
-  return consumptionBudget(0.95, income, savings, config) / income;
+  return consumptionBudget(0.95, income, income, savings, config) / income;
 }
