@@ -43,6 +43,22 @@ export interface SimConfig {
   targetStockDays: number;
   /** How much of the price signal is today's counter versus the stockroom. */
   demandPriceWeight: number;
+  /**
+   * The markup over unit production cost firms aim for.
+   *
+   * Without a cost anchor a firm prices purely off how fast stock is moving,
+   * which says nothing about whether the price covers the wages that made it.
+   * Pay can then rise straight through the price and leave the whole firm
+   * sector selling at a loss indefinitely.
+   */
+  targetMarkup: number;
+  /** How much of the price move is the pull towards cost, versus trading conditions. */
+  costAnchorWeight: number;
+  /**
+   * How far below cost a firm will let its price fall while it works through
+   * stock. Not zero: businesses do sell at a loss for a while.
+   */
+  minMarkup: number;
   /** How sharply buyers prefer cheaper sellers. */
   priceElasticity: number;
   /** Share of takings a comfortable firm puts back into capacity. */
@@ -211,6 +227,9 @@ export const DEFAULT_CONFIG: SimConfig = {
   targetSellThrough: 0.95,
   targetStockDays: 8,
   demandPriceWeight: 0.7,
+  targetMarkup: 0.22,
+  costAnchorWeight: 0.4,
+  minMarkup: -0.05,
   priceElasticity: 2.5,
   investmentRate: 0.15,
   dissavingRate: 0.0001,

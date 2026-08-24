@@ -210,12 +210,22 @@ function recogniseCostOfSales(
 }
 
 /**
- * Prices respond to two things: whether today's stock cleared, and whether the
- * stockroom is filling up or emptying out. The first is the fast signal, the
- * second stops a firm holding a price that is quietly building a mountain of
- * unsold goods.
+ * Prices respond to three things: what the goods cost to make, whether today's
+ * stock cleared, and whether the stockroom is filling or emptying.
+ *
+ * The cost anchor is the one that stops the economy dying. Trading conditions
+ * alone say nothing about whether a price covers the wages that went into the
+ * goods, so pay -- which is indexed to inflation and to how tight the labour
+ * market is -- could rise straight through the price and leave the entire firm
+ * sector selling below cost. Nobody with negative earnings can service a loan,
+ * so the credit market then closes, firms cannot fund payroll, and the whole
+ * thing unwinds. It took ten simulated years to become obvious and was
+ * invisible at three.
+ *
+ * Trading conditions still decide how fast a firm moves and how far it strays,
+ * so this is a target to be pulled towards rather than a price to be posted.
  */
-function adjustPrice(
+export function adjustPrice(
   firm: FirmView,
   sold: number,
   offered: number,
@@ -231,8 +241,20 @@ function adjustPrice(
   const stockDays = firm.expectedSales > 0 ? stock / firm.expectedSales : config.targetStockDays;
   const stockGap = clampUnit((config.targetStockDays - stockDays) / config.targetStockDays);
 
-  const move = config.demandPriceWeight * demandGap + (1 - config.demandPriceWeight) * stockGap;
-  firm.price = Math.max(1, Math.round(firm.price * (1 + config.priceAdjustment * move))) as Money;
+  const unitCost = unitProductionCost(firm);
+  const target = unitCost * (1 + config.targetMarkup * firm.pricingDiscipline);
+  const costGap = clampUnit((target - firm.price) / Math.max(1, firm.price));
+
+  const trading = config.demandPriceWeight * demandGap + (1 - config.demandPriceWeight) * stockGap;
+  const move = config.costAnchorWeight * costGap + (1 - config.costAnchorWeight) * trading;
+
+  const floor = Math.max(1, Math.round(unitCost * (1 + config.minMarkup)));
+  firm.price = Math.max(floor, Math.round(firm.price * (1 + config.priceAdjustment * move))) as Money;
+}
+
+/** What one unit costs to make, in wages. */
+export function unitProductionCost(firm: FirmView): number {
+  return firm.productivity > 0 ? firm.wagePerEmployee / firm.productivity : firm.wagePerEmployee;
 }
 
 function clampUnit(value: number): number {

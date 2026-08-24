@@ -80,6 +80,15 @@ export class FirmView {
     return this.target.kind === 'cohort' ? (this.target.pool.quality ?? 1) : this.target.quality;
   }
 
+  /**
+   * How firmly the firm defends its margin, as a multiple of the standard
+   * target markup. A better-run business holds out for a fuller price; a
+   * poorly run one discounts its way through the stockroom.
+   */
+  get pricingDiscipline(): number {
+    return 0.7 + 0.3 * this.quality;
+  }
+
   get price(): Money {
     return this.target.kind === 'cohort'
       ? ((this.target.pool.price ?? this.archetype.meanPrice) as Money)
