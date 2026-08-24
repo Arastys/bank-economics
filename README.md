@@ -27,8 +27,8 @@ node scripts/calibrate.js score  # how balanced is the economy right now?
 | --- | --- |
 | **Accounting** | Full double-entry ledger. Every entity — your bank, each firm, each pool of people, the state, the Bank of England — has real books that balance. |
 | **Your bank** | Loans (amortising and bullet), instant-access and term deposits, gilts and corporate bonds, central bank funding, a credit policy you set. |
-| **Companies** | Production, hiring and firing, pricing against cost, stock, investment, borrowing, distress and insolvency with asset recoveries. They differ in how well they are run, and settle pay on their own month of the year rather than all at once. |
-| **People** | Wages that reflect how good they are at the work, consumption budgeted against savings, deposits, mortgages held elsewhere. They are born, grow up, work, retire and die, and the birth rate answers to prosperity. |
+| **Companies** | Production, hiring and firing, pricing against cost, stock, investment, and demography — firms are founded and fail. They differ in how well they are run, and settle pay on their own month of the year rather than all at once. Borrowing, distress and insolvency with asset recoveries apply to firms simulated individually; the latent majority hold balance sheets but no contracts. |
+| **People** | Wages that reflect how good they are at the work, consumption budgeted against savings, and deposits that earn interest. They are born, grow up, work, retire and die, and the birth rate answers to prosperity. Their pre-existing borrowing is an opening balance with no contract behind it — it is serviced by nobody. |
 | **Markets** | A goods market that clears on price, a gilt curve, credit spreads, an interbank rate. |
 | **Labour** | A supply constraint on hiring from the working-age population, and pay that follows prices and labour-market tightness with downward nominal rigidity. |
 | **Policy** | A Monetary Policy Committee setting Bank Rate off inflation and the output gap; a state that taxes and spends. |
@@ -163,32 +163,33 @@ which ones actually move the score, and searches over the handful that do. See
 `docs/CALIBRATION.md`. Every tuning knob lives in `SimConfig`; if you need a
 magic number inside a system, put it there instead, or the sweep cannot see it.
 
-Known rough edges, measured over 24 seeds and ten simulated years — the
-baseline scores 67.8, and these are what it is made of:
+Known rough edges, measured over 24 seeds and ten simulated years:
 
-- **Too many firms fail** — 3.81% a year among the firms simulated
-  individually, against a 0.7% target. At 40.5 of the 67.8 it is 60% of the
-  whole scorecard, and *no parameter that describes it moves it*:
-  `lossGivenDefault`, `liquidationHaircut`, `liquidationVariance`,
-  `liquidationCyclicality` and `workoutHaircutFactor` all register no
-  measurable effect across 24 seeds. Firms fail into a population nothing
-  replenishes, so the answer is firm demography rather than credit policy.
-- **No firm demography.** Firms fail but none are ever created, so the
-  population falls about 0.7% a year with nothing offsetting it. `company.founded`
-  is declared as an event and never emitted. People, by contrast, now have
-  ages: they are born, grow up, work, retire and die, and the birth rate
-  answers to prosperity.
+- **Almost none of the economy's balance sheet has contracts behind it.** The
+  bank loan book is £7.6bn with 0.6% of it contracted at the open and 0.1% by
+  year ten, while 86% of customer deposits are contracted and paying interest.
+  The banking sector therefore pays for its funding and earns nothing on its
+  lending — it is loss-making by construction, and that one fact accounts for
+  its −0.87% net interest margin, its −£2.4bn of accumulated losses by year
+  twenty, and the player's bank failing to survive 11 runs in 24. The accounts
+  balance perfectly throughout, which is what makes it hard to spot. See
+  `docs/FLOWS.md`.
+- **There are no dividends anywhere.** Firms and banks close the year to
+  retained earnings and nothing ever leaves, so household income is wages,
+  deposit interest, bank operating costs and recycled tax — profit is not in
+  it. The model is only stable while nobody makes money.
 - **Monetary policy barely works.** Bank Rate reaches investment spending, but
   pinning it across a 900 basis point span moves inflation by a fraction of a
   point. Restraining demand here changes output rather than prices. The
   consumption channel is built and switched off for that reason. See
   `docs/ROADMAP.md`.
-- **The bank is the largest thing wrong with the model.** It fails to survive
-  11 calibration runs in 24, and 7 end with equity negative outright — which is
-  also where the headline 36% return on equity comes from, since a bank with no
-  equity left reports a spectacular return on it. It runs one frozen policy for
-  ten years, because the calibration harness issues no commands, so nothing
-  about how it prices or provisions ever adapts to the economy it is in.
+- **Nothing about the bank is calibratable.** `depositRate`, `lendingSpread`,
+  `maxDebtServiceRatio` and `targetCapitalRatio` all live on `BankPolicy`,
+  which no swept parameter reaches, and the calibration harness issues no
+  commands — so the bank holds one frozen policy for ten years while the
+  economy moves under it. Its leverage is enormous: a deposit rate of 3.1%
+  rather than 2.1% kills it in 24 seeds out of 24. `targetCapitalRatio` from
+  0.12 to 0.16 changes results not at all, because that constraint never binds.
 - **The economy runs slightly hot** — 2.2% unemployment against a 4.5% target,
   worth 7.7 of the score. Damping the cycle removed the busts and the labour
   block has never been retuned against an economy without them; every figure in
@@ -207,7 +208,15 @@ baseline scores 67.8, and these are what it is made of:
   and a longer run is slower for that reason. Campaigns spread one run per core.
 - **Regulation is reported, not enforced.** Breaching capital raises an event
   and nothing else happens yet.
-- **The rest of the market is scenery.** Rival banks hold aggregate books and
-  do not compete on price.
+- **Rival banks do not compete.** There are four of them holding a quarter of
+  the market each, but they all run the player's default policy, never change
+  it, and never receive a loan application.
 
-See `docs/ROADMAP.md` for what was deliberately left out and where it slots in.
+Where to read next:
+
+| | |
+| --- | --- |
+| `docs/FLOWS.md` | every money flow, and **which ones are real** — start here |
+| `docs/ARCHITECTURE.md` | the tick, the ledger, level of detail, determinism |
+| `docs/CALIBRATION.md` | how the economy is scored, swept and investigated |
+| `docs/ROADMAP.md` | what was left out, and the order it has to go back in |

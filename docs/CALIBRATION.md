@@ -318,6 +318,37 @@ not make monetary policy matter, which is written up in `docs/ROADMAP.md`.
 ×0.7, +89 at ×1.3), which settles a question an earlier five-year campaign got
 backwards: it is sitting at a local optimum and should not move.
 
+## Investigating something that is not a parameter
+
+Most of what has gone wrong with this model was not a badly set knob. It was a
+mechanism that did not exist, or existed and did nothing. The sweep cannot see
+either, so the tool is a throwaway probe: build a world, run it, print a table
+of the quantity you care about by year. Nearly every finding in these documents
+came out of thirty lines in a scratch file.
+
+Four traps, each of which has cost real time here:
+
+- **`ctx.rng` is seeded from `world.tick`.** Calling a system repeatedly on the
+  same tick replays the *same draw*, so a probe or a test that does not advance
+  `world.tick` will find nothing however many times it loops. A test written
+  this way passed cleanly against the bug it was supposed to catch.
+- **A mean over seeds can be carried by two runs.** The insolvency figure here
+  was reported from a listing of the six worst runs rather than counted across
+  the sample, and was wrong by a factor of five. Print the median beside the
+  mean, and count the tail explicitly.
+- **A signal measured against its own moving average is stationary by
+  construction.** Firm entry answered the margin against an average of that
+  same margin, so the gap averaged to zero and births equalled deaths for ever
+  whatever the economy did. If you want a quantity to trend, the reference
+  cannot be built from it — or the population has to be able to move it.
+- **A balance is not a behaviour.** See `docs/FLOWS.md`. Check the contract
+  count, not the balance, and watch whether the P&L account actually moves.
+
+The cheapest decisive test of whether a knob is connected at all: set it to
+something absurd and see if anything changes. `targetCapitalRatio` at 0.16
+instead of 0.12 produces byte-identical results, which is how we know that
+constraint has never once bound.
+
 ## Watch the denominator
 
 A metric can flatter the model without anyone lying, and this one moved twice.
