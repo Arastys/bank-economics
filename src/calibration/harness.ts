@@ -47,16 +47,19 @@ export function runJob(job: CalibrationJob): JobResult {
     originations += 1;
   });
 
-  const firmsAtStart = countFirms(world);
   const startedAt = Date.now();
   const ticks = Math.round(job.years * 365);
   engine.run(ticks);
   const elapsed = Math.max(1, Date.now() - startedAt);
 
-  const firmsAtEnd = countFirms(world);
-  const averageFirms = Math.max(1, (firmsAtStart + firmsAtEnd) / 2);
+  // Only firms simulated individually can fail: the rest of the economy is
+  // latent inside cohorts, which have no failure process of their own yet.
+  // Dividing by the whole population would understate the rate roughly
+  // fifteen-fold and quietly bias the whole scorecard. When cohort demography
+  // lands, this denominator becomes the whole population again.
+  const atRisk = Math.max(1, average(seriesOf(world.metrics, 'resolvedFirms')));
 
-  return { job, summary: summarise(world, job, ticks, elapsed, failures, originations, averageFirms) };
+  return { job, summary: summarise(world, job, ticks, elapsed, failures, originations, atRisk) };
 }
 
 function summarise(
@@ -66,7 +69,7 @@ function summarise(
   elapsedMs: number,
   failures: number,
   originations: number,
-  averageFirms: number,
+  atRiskFirms: number,
 ): RunSummary {
   const metrics = world.metrics;
   const equity = seriesOf(metrics, 'equity').filter(Number.isFinite);
@@ -99,7 +102,7 @@ function summarise(
     bankRate: spread(settled(seriesOf(metrics, 'bankRate'), 3)),
     outputGrowth: annualisedGrowth(seriesOf(metrics, 'output'), job.years),
     priceDrift: annualisedGrowth(seriesOf(metrics, 'priceLevel'), job.years),
-    insolvencyRate: failures / Math.max(1, job.years) / averageFirms,
+    insolvencyRate: failures / Math.max(1, job.years) / atRiskFirms,
 
     nim: averageEarning > 0 ? average(netInterest) / averageEarning : 0,
     // Bounded: return on equity goes to infinity as equity approaches zero, and
@@ -112,16 +115,6 @@ function summarise(
     survived: equity.every((value) => value > 0),
     originations: originations / Math.max(1, job.years),
   };
-}
-
-function countFirms(world: WorldState): number {
-  let total = 0;
-  for (const id in world.entities) {
-    const entity = world.entities[id]!;
-    if (entity.kind === 'company') total += 1;
-    else if (entity.kind === 'cohort' && entity.memberKind === 'company') total += entity.count;
-  }
-  return total;
 }
 
 function clampRatio(value: number, limit = 1.5): number {

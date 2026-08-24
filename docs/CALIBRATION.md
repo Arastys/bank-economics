@@ -88,6 +88,29 @@ Those bands are guard rails, not a tuning lock — their job is to catch a chang
 that sends the model into a spiral, not to freeze the current numbers. Tighten
 them as the calibration settles.
 
+## Watch the denominator
+
+A metric can flatter the model without anyone lying. Corporate insolvency was
+measured against every firm in the economy, but only the ~1,500 simulated
+individually can fail at all — the other 20,000 are latent inside cohorts with
+no failure process. The rate read 0.12% against a 0.7% target, looking mildly
+too low. Measured against the firms actually at risk it is 3.76%: five times
+too high, and the second-largest item on the scorecard.
+
+Nothing about the model changed; the score went from 52 to 90 because the
+measurement stopped hiding it. Before trusting a metric, check that its
+denominator is the population the numerator can come from.
+
+## The score is a diagnostic, not a target
+
+Two changes in this codebase made the score worse and were still right. Winding
+failed firms up properly means they genuinely stop producing, which shows up as
+output volatility. Fixing the insolvency denominator revealed a problem rather
+than creating one.
+
+If a change makes the model more correct and the score worse, the score is
+wrong, or a target is. Fix those. Do not fix the model back.
+
 ## A parameter nothing reads is worse than no parameter
 
 The sweep reports an unwired parameter as having no influence, and you conclude

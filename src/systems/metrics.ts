@@ -4,7 +4,7 @@ import { naturalBalance } from '../ledger/ledger.js';
 import { incomeStatement } from '../ledger/statements.js';
 import { record } from '../metrics/recorder.js';
 import { regulatoryMetrics } from '../metrics/regulatory.js';
-import { centralBank, heldBy, playerBank } from '../world/state.js';
+import { centralBank, heldBy, playerBank, resolvedCompanies } from '../world/state.js';
 import { PHASE, defineSystem } from './system.js';
 
 /**
@@ -62,6 +62,7 @@ export const metricsSystem = defineSystem({
       outputGap: world.economy.outputGap,
       priceLevel: world.economy.priceIndex,
       output: world.economy.outputUnits,
+      resolvedFirms: resolvedCompanies(world).length,
     });
 
     if (reg.capitalRatio < world.config.minimumCapitalRatio) {

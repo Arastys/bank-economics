@@ -164,17 +164,18 @@ magic number inside a system, put it there instead, or the sweep cannot see it.
 
 Known rough edges:
 
-- **Cost of risk is far too high** — around 18% of the loan book a year against
-  low single digits in reality, and by a distance the largest single item on the
-  scorecard. The cause is diagnosed: roughly 80% of the bank's losses begin with
-  a borrower defaulting on a facility held by a *different* lender, which then
-  cross-defaults ours.
-- **Inflation is volatile** (~9% standard deviation) and averages slightly
-  negative. Part of this is structural: the MPC reacts to year-on-year
-  inflation, which lags the cycle badly.
+- **Too many firms fail** — 3.76% a year among the firms simulated individually,
+  against a 0.7% target. Now the largest item on the scorecard.
+- **Inflation is volatile** (~7.6% standard deviation). Part of this is
+  structural: the MPC reacts to year-on-year inflation, which lags the cycle
+  badly, so no parameter setting removes it.
+- **The bank is too profitable** — 43% return on equity against a 10% target,
+  which is what happens when credit losses are near zero.
 - **No firm or household demography.** Firms fail but none are ever created, so
   the population falls about 0.7% a year with nothing offsetting it. Household
-  numbers never change at all.
+  numbers never change at all. Latent firms inside cohorts cannot fail, which
+  is why the insolvency rate is measured against the at-risk population rather
+  than the whole economy.
 - **All firms behave identically.** They differ in size, sector and outcome, but
   every one of them runs the same decision rules with the same parameters.
 - **Throughput** is fine for play and slow for large batch balancing runs. The
