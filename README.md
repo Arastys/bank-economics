@@ -183,9 +183,12 @@ baseline scores 67.8, and these are what it is made of:
   point. Restraining demand here changes output rather than prices. The
   consumption channel is built and switched off for that reason. See
   `docs/ROADMAP.md`.
-- **The bank is too profitable** — 22% return on equity against a 12% target,
-  which is what happens when credit losses are near zero (0.69% against 1%).
-- **The economy runs slightly hot** — 1.6% unemployment against a 4.5% target,
+- **The bank is the largest thing wrong with the model.** 36% return on equity
+  against a 12% target, and worse, it ends with negative equity in 2 seeds out
+  of 24 — which is also where the headline figure comes from, since a bank with
+  no equity left reports a spectacular return on it. Nothing about how it prices
+  or provisions was calibrated for an economy that grows, and it now grows.
+- **The economy runs slightly hot** — 2.2% unemployment against a 4.5% target,
   worth 7.7 of the score. Damping the cycle removed the busts and the labour
   block has never been retuned against an economy without them; every figure in
   it was fitted to a cycling one.

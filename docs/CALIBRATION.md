@@ -255,16 +255,21 @@ settling excursion; the last is where it stands now.
 
 | component | observed | then | now |
 | --- | ---: | ---: | ---: |
-| inflation level | 4.04% | 6.3 | 8.4 |
-| unemployment | 1.57% | 0.8 | 7.7 |
-| net interest margin | 4.84% | 0.6 | 3.9 |
-| return on equity | 21.96% | 1.7 | 2.3 |
-| inflation volatility | 2.53% | 15.8 | 1.9 |
-| output growth | −0.26% | 0.7 | 0.8 |
-| cost of risk | 0.69% | 0.4 | 0.4 |
-| unemployment volatility | 1.62% | 1.5 | 0.2 |
-| corporate insolvency | 0.77% | 41.7 | **0.0** |
-| **total** | | **69.5** | **25.6** |
+| return on equity | 36.30% | 1.7 | **25.0** |
+| unemployment | 2.18% | 0.8 | 5.3 |
+| inflation level | 2.06% | 6.3 | 2.0 |
+| net interest margin | 3.06% | 0.6 | 1.9 |
+| inflation volatility | 2.26% | 15.8 | 1.1 |
+| cost of risk | 0.59% | 0.4 | 0.9 |
+| output growth | 0.67% | 0.7 | 0.2 |
+| unemployment volatility | 1.59% | 1.5 | 0.2 |
+| corporate insolvency | 0.75% | 41.7 | **0.0** |
+| **total** | | **69.5** | **59.6** |
+
+Read the total with care. The median run scores 39.5 against that mean of
+59.6, because the bank ends with negative equity in 2 seeds of 24 and a bank
+with no equity left reports an enormous return on it. Two runs are dragging
+every mean in the table.
 
 What moved and why, in order:
 

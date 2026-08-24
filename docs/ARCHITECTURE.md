@@ -23,6 +23,7 @@ slots in without renumbering.
 | 0 | *(commands)* | Player actions, applied by the engine itself |
 | 100 | `policy.monetary` | MPC sets Bank Rate from inflation and the output gap |
 | 200 | `markets.rates` | Yield curve, credit spreads, bond prices |
+| 250 | `economy.capital` | Sets output per head from the capital behind each worker |
 | 300 | `economy.production` | Firms produce; jobs are filled; wages paid to people |
 | 350 | `economy.goodsMarket` | Demand meets output; prices move |
 | 400 | `firms.decisions` | Monthly pay, hiring against labour supply, funding needs |

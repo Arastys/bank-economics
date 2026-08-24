@@ -6,32 +6,28 @@ the point of the structure.
 
 ## What is actually in the way
 
-The baseline scores 25.6 over 24 seeds at ten years. Two things are most of it:
+The baseline scores 59.6 over 24 seeds at ten years, and that total is worse
+than the 25.6 it replaced while nearly every economic target got better. What
+happened is worth reading before touching anything:
 
-- **Inflation level, 8.4.** 4.04% against 2%. Monetary policy cannot help:
-  restraining demand here moves output rather than prices. See below.
-- **Unemployment, 7.7 — and it is too low, not too high.** 1.57% against a 4.5%
-  target. Damping the business cycle removed the busts and the labour block has
-  never been retuned against an economy without them; every figure in it was
-  fitted to a cycling one. This one *is* tuning, and `neutralTightness` is the
-  dominant knob. Removing the job leak that `risk.credit` was running made this
-  slightly worse and slightly more honest.
+- **Inflation 2.06% against a 2% target** (was 4.04%), volatility 2.26%.
+- **Output growth 0.67% against 1.5%** (was -0.26%). The model has trend
+  growth at all for the first time.
+- **Corporate insolvency 0.75% against 0.7%.**
+- **Unemployment 2.18% against 4.5%**, worth 5.3 and still the long-standing
+  calibration debt: the labour block was fitted to an economy with busts in it.
 
-Then `nim` at 3.9 (4.84% against 2.5%) and `roe` at 2.3 (22.0% against 12%) —
-the bank is too profitable, which is a pricing question rather than an
-economic one.
+And then the thing that swamps all of it:
 
-Two things have left this list.
-
-**Corporate insolvency, which was 40.5 of 67.8 — 60% of everything.** It was
-not an economy failing five times too fast. The rate counted failures among
-firms the player had lent to and divided by the number of firms the player had
-lent to, then compared the result against a whole-economy target; a population
-selected for having borrowed fails far more often than one that has not. Firm
-demography gave the latent 22,000 a failure process, which made the
-whole-economy denominator legitimate, and the term went to 0.0 at 0.77%
-against a 0.7% target. Worth remembering as the model's clearest case of a
-number being wrong about its own subject rather than wrong in value.
+- **Return on equity, 25.0 of the 59.6.** 36.3% against a 12% target, and the
+  mean is not the story. The median run scores 39.5 against a mean of 59.6,
+  because **the bank ends with negative equity in 2 of 24 seeds** -- and a bank
+  with almost no equity left reports a spectacular return on it, which is where
+  150% and 71% come from. This is the largest thing wrong with the model and
+  it is new: capital deepening gave the economy growth, growth gave the bank a
+  bigger book, and nothing about how the bank prices or provisions was ever
+  calibrated for that. Fix the insolvencies before reading anything else on
+  this card, because two runs are dragging every mean on it.
 
 **The business cycle.** Its amplitude was mostly one defect — every firm
 settling pay on the same tick — and volatility has gone from 15.8 to 1.9.
